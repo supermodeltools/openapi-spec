@@ -1,0 +1,1913 @@
+openapi: 3.0.0
+info:
+  title: Supermodel
+  description: Code Graphing & Analysis API
+  version: 0.3.2
+  license:
+    name: Supermodel API Terms of Service
+    url: https://supermodeltools.com/legal/api-terms
+servers:
+  - url: https://api.supermodeltools.com
+    description: Production server
+tags:
+  - name: Data Plane
+    description: Calls the data plane to retrieve Supermodel analysis artifacts derived from repositories.
+paths:
+  /v1/graphs/dependency:
+    post:
+      tags:
+        - Data Plane
+      summary: Dependency graph
+      description: Upload a zipped repository snapshot to generate the dependency graph.
+      operationId: generateDependencyGraph
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Zipped repository archive containing the code to analyze.
+      x-codeSamples:
+        - lang: cURL
+          label: cURL
+          source: |
+            curl -X POST 'https://api.supermodeltools.com/v1/graphs/dependency' \
+              -H 'Idempotency-Key: <idempotency-key>' \
+              -H 'X-Api-Key: <api-key>' \
+              -F 'file=@/path/to/your/repo-snapshot.zip;type=application/zip'
+        - lang: javascript
+          label: JavaScript (fetch)
+          source: |
+            import { readFile } from 'node:fs/promises';
+            const baseUrl = process.env.API_BASE_URL || 'https://api.supermodeltools.com';
+            const apiKey = '<api-key>';
+            const idempotencyKey = '<idempotency-key>';
+            const archivePath = '/path/to/your/repo-snapshot.zip';
+
+            const buffer = await readFile(archivePath);
+            const form = new FormData();
+            form.append('file', new Blob([buffer], { type: 'application/zip' }), 'repo-snapshot.zip');
+
+            const res = await fetch(`${baseUrl}/v1/graphs/dependency`, {
+              method: 'POST',
+              headers: {
+                'Idempotency-Key': idempotencyKey,
+                'X-Api-Key': apiKey
+              },
+              body: form
+            });
+
+            if (!res.ok) throw new Error(await res.text());
+            console.log(await res.json());
+        - lang: typescript
+          label: TypeScript (SDK)
+          source: |
+            import { Configuration, DefaultApi } from '@supermodel/public-api-typescript';
+            import { readFile } from 'node:fs/promises';
+
+            const baseUrl = process.env.API_BASE_URL || 'https://api.supermodeltools.com';
+            const apiKey = '<api-key>';
+            const idempotencyKey = '<idempotency-key>';
+            const archivePath = '/path/to/your/repo-snapshot.zip';
+
+            const buffer = await readFile(archivePath);
+            const archiveBlob = new Blob([buffer], { type: 'application/zip' });
+
+            const configuration = new Configuration({ basePath: baseUrl });
+
+            const apiKeyOverride = async ({ init }) => ({
+              headers: { ...(init.headers ?? {}), 'X-Api-Key': apiKey }
+            });
+
+            const api = new DefaultApi(configuration);
+            const result = await api.generateDependencyGraph(
+              { idempotencyKey, file: archiveBlob },
+              apiKeyOverride
+            );
+
+            console.log(result);
+        - lang: java
+          label: Java (generated client)
+          source: |
+            import org.openapitools.client.ApiClient;
+            import org.openapitools.client.api.DefaultApi;
+
+            import java.io.File;
+
+            public class Example {
+              public static void main(String[] args) throws Exception {
+                String baseUrl = System.getenv().getOrDefault("API_BASE_URL", "https://api.supermodeltools.com");
+                String apiKey = "<api-key>";
+                String idempotencyKey = "<idempotency-key>";
+                File archive = new File("/path/to/your/repo-snapshot.zip");
+
+                ApiClient client = new ApiClient();
+                client.updateBaseUri(baseUrl);
+                client.setRequestInterceptor(rb -> {
+                  rb.header("X-Api-Key", apiKey);
+                });
+
+                DefaultApi api = new DefaultApi(client);
+                api.generateDependencyGraph(idempotencyKey, archive);
+              }
+            }
+        - lang: python
+          label: Python (generated client)
+          source: |
+            import os
+            from supermodel_public_api import ApiClient, Configuration
+            from supermodel_public_api.api.default_api import DefaultApi
+
+            base_url = os.environ.get("API_BASE_URL", "https://api.supermodeltools.com")
+            api_key = "<api-key>"
+            idempotency_key = "<idempotency-key>"
+
+            configuration = Configuration(host=base_url)
+            configuration.api_key["ApiKeyAuth"] = api_key
+
+            api_client = ApiClient(configuration)
+            api = DefaultApi(api_client)
+
+            with open("/path/to/your/repo-snapshot.zip", "rb") as f:
+              payload = f.read()
+
+            result = api.generate_dependency_graph(idempotency_key, file=payload)
+            print(result)
+        - lang: rust
+          label: Rust (reqwest)
+          source: |
+            use bytes::Bytes;
+            use reqwest::multipart::{Form, Part};
+
+            #[tokio::main]
+            async fn main() -> anyhow::Result<()> {
+              let base_url = std::env::var("API_BASE_URL")
+                .unwrap_or_else(|_| "https://api.supermodeltools.com".to_string());
+              let api_key = "<api-key>";
+              let idempotency_key = "<idempotency-key>";
+
+              let archive_bytes = Bytes::from(tokio::fs::read("/path/to/your/repo-snapshot.zip").await?);
+              let url = format!("{}/v1/graphs/dependency", base_url.trim_end_matches('/'));
+
+              let file_part = Part::bytes(archive_bytes.to_vec())
+                .file_name("repo.zip")
+                .mime_str("application/zip")?;
+              let form = Form::new().part("file", file_part);
+
+              let response = reqwest::Client::new()
+                .post(url)
+                .header("Idempotency-Key", idempotency_key)
+                .header("X-Api-Key", api_key)
+                .multipart(form)
+                .send()
+                .await?;
+              let status = response.status();
+              let body = response.bytes().await?;
+
+              if status.is_success() {
+                println!("{}", String::from_utf8_lossy(&body));
+              } else {
+                anyhow::bail!(
+                  "Request failed ({}): {}",
+                  status.as_u16(),
+                  String::from_utf8_lossy(&body)
+                );
+              }
+
+              Ok(())
+            }
+      responses:
+        '200':
+          description: Dependency graph
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Usage-Units:
+              $ref: '#/components/headers/X-Usage-Units'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeGraphEnvelope'
+              example:
+                generatedAt: '2025-02-05 15:42:10.000000000 Z'
+                message: Graph generated successfully
+                stats:
+                  filesProcessed: 2
+                  classes: 0
+                  functions: 0
+                  types: 0
+                  processingTimeMs: 15
+                graph:
+                  nodes:
+                    - id: src/main.js
+                      labels:
+                        - File
+                      properties:
+                        path: src/main.js
+                        name: main.js
+                    - id: src/math.js
+                      labels:
+                        - File
+                      properties:
+                        path: src/math.js
+                        name: math.js
+                  relationships:
+                    - id: src/main.js_imports_src/math.js
+                      type: imports
+                      startNode: src/main.js
+                      endNode: src/math.js
+                      properties: {}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          description: Bad Gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/graphs/call:
+    post:
+      tags:
+        - Data Plane
+      summary: Call graph
+      description: Upload a zipped repository snapshot to generate the function-level call graph.
+      operationId: generateCallGraph
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Zipped repository archive containing the code to analyze.
+      x-codeSamples:
+        - lang: cURL
+          label: cURL
+          source: |
+            curl -X POST 'https://api.supermodeltools.com/v1/graphs/call' \
+              -H 'Idempotency-Key: <idempotency-key>' \
+              -H 'X-Api-Key: <api-key>' \
+              -F 'file=@/path/to/your/repo-snapshot.zip;type=application/zip'
+        - lang: javascript
+          label: JavaScript (fetch)
+          source: |
+            import { readFile } from 'node:fs/promises';
+            const baseUrl = process.env.API_BASE_URL || 'https://api.supermodeltools.com';
+            const apiKey = '<api-key>';
+            const idempotencyKey = '<idempotency-key>';
+            const archivePath = '/path/to/your/repo-snapshot.zip';
+
+            const buffer = await readFile(archivePath);
+            const form = new FormData();
+            form.append('file', new Blob([buffer], { type: 'application/zip' }), 'repo-snapshot.zip');
+
+            const res = await fetch(`${baseUrl}/v1/graphs/call`, {
+              method: 'POST',
+              headers: {
+                'Idempotency-Key': idempotencyKey,
+                'X-Api-Key': apiKey
+              },
+              body: form
+            });
+
+            if (!res.ok) throw new Error(await res.text());
+            console.log(await res.json());
+        - lang: typescript
+          label: TypeScript (SDK)
+          source: |
+            import { Configuration, DefaultApi } from '@supermodel/public-api-typescript';
+            import { readFile } from 'node:fs/promises';
+
+            const baseUrl = process.env.API_BASE_URL || 'https://api.supermodeltools.com';
+            const apiKey = '<api-key>';
+            const idempotencyKey = '<idempotency-key>';
+            const archivePath = '/path/to/your/repo-snapshot.zip';
+
+            const buffer = await readFile(archivePath);
+            const archiveBlob = new Blob([buffer], { type: 'application/zip' });
+
+            const configuration = new Configuration({ basePath: baseUrl });
+
+            const apiKeyOverride = async ({ init }) => ({
+              headers: { ...(init.headers ?? {}), 'X-Api-Key': apiKey }
+            });
+
+            const api = new DefaultApi(configuration);
+            const result = await api.generateCallGraph(
+              { idempotencyKey, file: archiveBlob },
+              apiKeyOverride
+            );
+
+            console.log(result);
+        - lang: java
+          label: Java (generated client)
+          source: |
+            import org.openapitools.client.ApiClient;
+            import org.openapitools.client.api.DefaultApi;
+
+            import java.io.File;
+
+            public class Example {
+              public static void main(String[] args) throws Exception {
+                String baseUrl = System.getenv().getOrDefault("API_BASE_URL", "https://api.supermodeltools.com");
+                String apiKey = "<api-key>";
+                String idempotencyKey = "<idempotency-key>";
+                File archive = new File("/path/to/your/repo-snapshot.zip");
+
+                ApiClient client = new ApiClient();
+                client.updateBaseUri(baseUrl);
+                client.setRequestInterceptor(rb -> {
+                  rb.header("X-Api-Key", apiKey);
+                });
+
+                DefaultApi api = new DefaultApi(client);
+                api.generateCallGraph(idempotencyKey, archive);
+              }
+            }
+        - lang: python
+          label: Python (generated client)
+          source: |
+            import os
+            from supermodel_public_api import ApiClient, Configuration
+            from supermodel_public_api.api.default_api import DefaultApi
+
+            base_url = os.environ.get("API_BASE_URL", "https://api.supermodeltools.com")
+            api_key = "<api-key>"
+            idempotency_key = "<idempotency-key>"
+
+            configuration = Configuration(host=base_url)
+            configuration.api_key["ApiKeyAuth"] = api_key
+
+            api_client = ApiClient(configuration)
+            api = DefaultApi(api_client)
+
+            with open("/path/to/your/repo-snapshot.zip", "rb") as f:
+              payload = f.read()
+
+            result = api.generate_call_graph(idempotency_key, file=payload)
+            print(result)
+        - lang: rust
+          label: Rust (reqwest)
+          source: |
+            use bytes::Bytes;
+            use reqwest::multipart::{Form, Part};
+
+            #[tokio::main]
+            async fn main() -> anyhow::Result<()> {
+              let base_url = std::env::var("API_BASE_URL")
+                .unwrap_or_else(|_| "https://api.supermodeltools.com".to_string());
+              let api_key = "<api-key>";
+              let idempotency_key = "<idempotency-key>";
+
+              let archive_bytes = Bytes::from(tokio::fs::read("/path/to/your/repo-snapshot.zip").await?);
+              let url = format!("{}/v1/graphs/call", base_url.trim_end_matches('/'));
+
+              let file_part = Part::bytes(archive_bytes.to_vec())
+                .file_name("repo.zip")
+                .mime_str("application/zip")?;
+              let form = Form::new().part("file", file_part);
+
+              let response = reqwest::Client::new()
+                .post(url)
+                .header("Idempotency-Key", idempotency_key)
+                .header("X-Api-Key", api_key)
+                .multipart(form)
+                .send()
+                .await?;
+              let status = response.status();
+              let body = response.bytes().await?;
+
+              if status.is_success() {
+                println!("{}", String::from_utf8_lossy(&body));
+              } else {
+                anyhow::bail!(
+                  "Request failed ({}): {}",
+                  status.as_u16(),
+                  String::from_utf8_lossy(&body)
+                );
+              }
+
+              Ok(())
+            }
+      responses:
+        '200':
+          description: Call graph
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Usage-Units:
+              $ref: '#/components/headers/X-Usage-Units'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeGraphEnvelope'
+              example:
+                generatedAt: '2025-02-05 15:42:10.000000000 Z'
+                message: Call graph generated successfully
+                stats:
+                  filesProcessed: 2
+                  classes: 0
+                  functions: 2
+                  types: 0
+                  processingTimeMs: 8
+                graph:
+                  nodes:
+                    - id: fn:index.ts:init
+                      labels:
+                        - Function
+                      properties:
+                        file: src/index.ts
+                    - id: fn:service.ts:handle
+                      labels:
+                        - Function
+                      properties:
+                        file: src/service.ts
+                  relationships:
+                    - id: fn:index.ts:init_calls_fn:service.ts:handle
+                      type: calls
+                      startNode: fn:index.ts:init
+                      endNode: fn:service.ts:handle
+                      properties:
+                        count: 4
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          description: Bad Gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/graphs/domain:
+    post:
+      tags:
+        - Data Plane
+      summary: Domain graph
+      description: Upload a zipped repository snapshot to generate the domain model graph.
+      operationId: generateDomainGraph
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Zipped repository archive containing the code to analyze.
+      x-codeSamples:
+        - lang: cURL
+          label: cURL
+          source: |
+            curl -X POST 'https://api.supermodeltools.com/v1/graphs/domain' \
+              -H 'Idempotency-Key: <idempotency-key>' \
+              -H 'X-Api-Key: <api-key>' \
+              -F 'file=@/path/to/your/repo-snapshot.zip;type=application/zip'
+        - lang: javascript
+          label: JavaScript (fetch)
+          source: |
+            import { readFile } from 'node:fs/promises';
+            const baseUrl = process.env.API_BASE_URL || 'https://api.supermodeltools.com';
+            const apiKey = '<api-key>';
+            const idempotencyKey = '<idempotency-key>';
+            const archivePath = '/path/to/your/repo-snapshot.zip';
+
+            const buffer = await readFile(archivePath);
+            const form = new FormData();
+            form.append('file', new Blob([buffer], { type: 'application/zip' }), 'repo-snapshot.zip');
+
+            const res = await fetch(`${baseUrl}/v1/graphs/domain`, {
+              method: 'POST',
+              headers: {
+                'Idempotency-Key': idempotencyKey,
+                'X-Api-Key': apiKey
+              },
+              body: form
+            });
+
+            if (!res.ok) throw new Error(await res.text());
+            console.log(await res.json());
+        - lang: typescript
+          label: TypeScript (SDK)
+          source: |
+            import { Configuration, DefaultApi } from '@supermodel/public-api-typescript';
+            import { readFile } from 'node:fs/promises';
+
+            const baseUrl = process.env.API_BASE_URL || 'https://api.supermodeltools.com';
+            const apiKey = '<api-key>';
+            const idempotencyKey = '<idempotency-key>';
+            const archivePath = '/path/to/your/repo-snapshot.zip';
+
+            const buffer = await readFile(archivePath);
+            const archiveBlob = new Blob([buffer], { type: 'application/zip' });
+
+            const configuration = new Configuration({ basePath: baseUrl });
+
+            const apiKeyOverride = async ({ init }) => ({
+              headers: { ...(init.headers ?? {}), 'X-Api-Key': apiKey }
+            });
+
+            const api = new DefaultApi(configuration);
+            const result = await api.generateDomainGraph(
+              { idempotencyKey, file: archiveBlob },
+              apiKeyOverride
+            );
+
+            console.log(result);
+        - lang: java
+          label: Java (generated client)
+          source: |
+            import org.openapitools.client.ApiClient;
+            import org.openapitools.client.api.DefaultApi;
+
+            import java.io.File;
+
+            public class Example {
+              public static void main(String[] args) throws Exception {
+                String baseUrl = System.getenv().getOrDefault("API_BASE_URL", "https://api.supermodeltools.com");
+                String apiKey = "<api-key>";
+                String idempotencyKey = "<idempotency-key>";
+                File archive = new File("/path/to/your/repo-snapshot.zip");
+
+                ApiClient client = new ApiClient();
+                client.updateBaseUri(baseUrl);
+                client.setRequestInterceptor(rb -> {
+                  rb.header("X-Api-Key", apiKey);
+                });
+
+                DefaultApi api = new DefaultApi(client);
+                api.generateDomainGraph(idempotencyKey, archive);
+              }
+            }
+        - lang: python
+          label: Python (generated client)
+          source: |
+            import os
+            from supermodel_public_api import ApiClient, Configuration
+            from supermodel_public_api.api.default_api import DefaultApi
+
+            base_url = os.environ.get("API_BASE_URL", "https://api.supermodeltools.com")
+            api_key = "<api-key>"
+            idempotency_key = "<idempotency-key>"
+
+            configuration = Configuration(host=base_url)
+            configuration.api_key["ApiKeyAuth"] = api_key
+
+            api_client = ApiClient(configuration)
+            api = DefaultApi(api_client)
+
+            with open("/path/to/your/repo-snapshot.zip", "rb") as f:
+              payload = f.read()
+
+            result = api.generate_domain_graph(idempotency_key, file=payload)
+            print(result)
+        - lang: rust
+          label: Rust (reqwest)
+          source: |
+            use bytes::Bytes;
+            use reqwest::multipart::{Form, Part};
+
+            #[tokio::main]
+            async fn main() -> anyhow::Result<()> {
+              let base_url = std::env::var("API_BASE_URL")
+                .unwrap_or_else(|_| "https://api.supermodeltools.com".to_string());
+              let api_key = "<api-key>";
+              let idempotency_key = "<idempotency-key>";
+
+              let archive_bytes = Bytes::from(tokio::fs::read("/path/to/your/repo-snapshot.zip").await?);
+              let url = format!("{}/v1/graphs/domain", base_url.trim_end_matches('/'));
+
+              let file_part = Part::bytes(archive_bytes.to_vec())
+                .file_name("repo.zip")
+                .mime_str("application/zip")?;
+              let form = Form::new().part("file", file_part);
+
+              let response = reqwest::Client::new()
+                .post(url)
+                .header("Idempotency-Key", idempotency_key)
+                .header("X-Api-Key", api_key)
+                .multipart(form)
+                .send()
+                .await?;
+              let status = response.status();
+              let body = response.bytes().await?;
+
+              if status.is_success() {
+                println!("{}", String::from_utf8_lossy(&body));
+              } else {
+                anyhow::bail!(
+                  "Request failed ({}): {}",
+                  status.as_u16(),
+                  String::from_utf8_lossy(&body)
+                );
+              }
+
+              Ok(())
+            }
+      responses:
+        '200':
+          description: Domain graph
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Usage-Units:
+              $ref: '#/components/headers/X-Usage-Units'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainClassificationResponse'
+              example:
+                runId: smart-sampling-a1b2c3d4
+                domains:
+                  - name: BillingAccount
+                    descriptionSummary: Handles billing and account management
+                    keyFiles:
+                      - src/domain/billing.ts
+                      - src/services/billing.service.ts
+                    responsibilities:
+                      - Account creation
+                      - Payment processing
+                    subdomains:
+                      - name: PaymentProcessing
+                        descriptionSummary: Processes payment transactions
+                  - name: UsageSummary
+                    descriptionSummary: Tracks and summarizes usage metrics
+                    keyFiles:
+                      - src/domain/usage.ts
+                    responsibilities:
+                      - Usage tracking
+                      - Metrics aggregation
+                    subdomains: []
+                relationships:
+                  - from: BillingAccount
+                    to: UsageSummary
+                    type: aggregates
+                    strength: 0.8
+                    reason: BillingAccount aggregates usage data for billing purposes
+                fileAssignments:
+                  - filePath: src/domain/billing.ts
+                    domainName: BillingAccount
+                  - filePath: src/domain/usage.ts
+                    domainName: UsageSummary
+                functionAssignments:
+                  - functionId: func-123
+                    subdomainName: PaymentProcessing
+                    parentDomain: BillingAccount
+                unassignedFunctions:
+                  - functionId: func-456
+                    reason: Utility function with unclear domain association
+                classAssignments:
+                  - classId: class-789
+                    domainName: BillingAccount
+                functionDescriptions:
+                  - functionId: func-123
+                    descriptionSummary: Processes incoming payment transactions
+                    domainName: BillingAccount
+                  - functionId: func-456
+                    descriptionSummary: Aggregates usage metrics for billing period
+                stats:
+                  domainCount: 2
+                  relationshipCount: 1
+                  fileAssignments: 2
+                  functionAssignments: 1
+                  unassignedFunctions: 1
+                  classAssignments: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          description: Bad Gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/graphs/parse:
+    post:
+      tags:
+        - Data Plane
+      summary: Parse graph
+      description: Upload a zipped repository snapshot to generate parse tree relationships.
+      operationId: generateParseGraph
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Zipped repository archive containing the code to analyze.
+      x-codeSamples:
+        - lang: cURL
+          label: cURL
+          source: |
+            curl -X POST 'https://api.supermodeltools.com/v1/graphs/parse' \
+              -H 'Idempotency-Key: <idempotency-key>' \
+              -H 'X-Api-Key: <api-key>' \
+              -F 'file=@/path/to/your/repo-snapshot.zip;type=application/zip'
+        - lang: javascript
+          label: JavaScript (fetch)
+          source: |
+            import { readFile } from 'node:fs/promises';
+            const baseUrl = process.env.API_BASE_URL || 'https://api.supermodeltools.com';
+            const apiKey = '<api-key>';
+            const idempotencyKey = '<idempotency-key>';
+            const archivePath = '/path/to/your/repo-snapshot.zip';
+
+            const buffer = await readFile(archivePath);
+            const form = new FormData();
+            form.append('file', new Blob([buffer], { type: 'application/zip' }), 'repo-snapshot.zip');
+
+            const res = await fetch(`${baseUrl}/v1/graphs/parse`, {
+              method: 'POST',
+              headers: {
+                'Idempotency-Key': idempotencyKey,
+                'X-Api-Key': apiKey
+              },
+              body: form
+            });
+
+            if (!res.ok) throw new Error(await res.text());
+            console.log(await res.json());
+        - lang: typescript
+          label: TypeScript (SDK)
+          source: |
+            import { Configuration, DefaultApi } from '@supermodel/public-api-typescript';
+            import { readFile } from 'node:fs/promises';
+
+            const baseUrl = process.env.API_BASE_URL || 'https://api.supermodeltools.com';
+            const apiKey = '<api-key>';
+            const idempotencyKey = '<idempotency-key>';
+            const archivePath = '/path/to/your/repo-snapshot.zip';
+
+            const buffer = await readFile(archivePath);
+            const archiveBlob = new Blob([buffer], { type: 'application/zip' });
+
+            const configuration = new Configuration({ basePath: baseUrl });
+
+            const apiKeyOverride = async ({ init }) => ({
+              headers: { ...(init.headers ?? {}), 'X-Api-Key': apiKey }
+            });
+
+            const api = new DefaultApi(configuration);
+            const result = await api.generateParseGraph(
+              { idempotencyKey, file: archiveBlob },
+              apiKeyOverride
+            );
+
+            console.log(result);
+        - lang: java
+          label: Java (generated client)
+          source: |
+            import org.openapitools.client.ApiClient;
+            import org.openapitools.client.api.DefaultApi;
+
+            import java.io.File;
+
+            public class Example {
+              public static void main(String[] args) throws Exception {
+                String baseUrl = System.getenv().getOrDefault("API_BASE_URL", "https://api.supermodeltools.com");
+                String apiKey = "<api-key>";
+                String idempotencyKey = "<idempotency-key>";
+                File archive = new File("/path/to/your/repo-snapshot.zip");
+
+                ApiClient client = new ApiClient();
+                client.updateBaseUri(baseUrl);
+                client.setRequestInterceptor(rb -> {
+                  rb.header("X-Api-Key", apiKey);
+                });
+
+                DefaultApi api = new DefaultApi(client);
+                api.generateParseGraph(idempotencyKey, archive);
+              }
+            }
+        - lang: python
+          label: Python (generated client)
+          source: |
+            import os
+            from supermodel_public_api import ApiClient, Configuration
+            from supermodel_public_api.api.default_api import DefaultApi
+
+            base_url = os.environ.get("API_BASE_URL", "https://api.supermodeltools.com")
+            api_key = "<api-key>"
+            idempotency_key = "<idempotency-key>"
+
+            configuration = Configuration(host=base_url)
+            configuration.api_key["ApiKeyAuth"] = api_key
+
+            api_client = ApiClient(configuration)
+            api = DefaultApi(api_client)
+
+            with open("/path/to/your/repo-snapshot.zip", "rb") as f:
+              payload = f.read()
+
+            result = api.generate_parse_graph(idempotency_key, file=payload)
+            print(result)
+        - lang: rust
+          label: Rust (reqwest)
+          source: |
+            use bytes::Bytes;
+            use reqwest::multipart::{Form, Part};
+
+            #[tokio::main]
+            async fn main() -> anyhow::Result<()> {
+              let base_url = std::env::var("API_BASE_URL")
+                .unwrap_or_else(|_| "https://api.supermodeltools.com".to_string());
+              let api_key = "<api-key>";
+              let idempotency_key = "<idempotency-key>";
+
+              let archive_bytes = Bytes::from(tokio::fs::read("/path/to/your/repo-snapshot.zip").await?);
+              let url = format!("{}/v1/graphs/parse", base_url.trim_end_matches('/'));
+
+              let file_part = Part::bytes(archive_bytes.to_vec())
+                .file_name("repo.zip")
+                .mime_str("application/zip")?;
+              let form = Form::new().part("file", file_part);
+
+              let response = reqwest::Client::new()
+                .post(url)
+                .header("Idempotency-Key", idempotency_key)
+                .header("X-Api-Key", api_key)
+                .multipart(form)
+                .send()
+                .await?;
+              let status = response.status();
+              let body = response.bytes().await?;
+
+              if status.is_success() {
+                println!("{}", String::from_utf8_lossy(&body));
+              } else {
+                anyhow::bail!(
+                  "Request failed ({}): {}",
+                  status.as_u16(),
+                  String::from_utf8_lossy(&body)
+                );
+              }
+
+              Ok(())
+            }
+      responses:
+        '200':
+          description: Parse graph
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Usage-Units:
+              $ref: '#/components/headers/X-Usage-Units'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeGraphEnvelope'
+              example:
+                generatedAt: '2025-02-05 15:42:10.000000000 Z'
+                message: Parse graph generated successfully
+                stats:
+                  filesProcessed: 1
+                  classes: 0
+                  functions: 1
+                  types: 0
+                  processingTimeMs: 12
+                graph:
+                  nodes:
+                    - id: ast:src/index.ts:1:0
+                      labels:
+                        - Program
+                      properties:
+                        kind: Program
+                    - id: ast:src/index.ts:3:2
+                      labels:
+                        - FunctionDeclaration
+                      properties:
+                        name: init
+                  relationships:
+                    - id: ast:src/index.ts:1:0_contains_ast:src/index.ts:3:2
+                      type: contains
+                      startNode: ast:src/index.ts:1:0
+                      endNode: ast:src/index.ts:3:2
+                      properties:
+                        order: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          description: Bad Gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/graphs/supermodel:
+    post:
+      tags:
+        - Data Plane
+      summary: Supermodel graph
+      description: Upload a zipped repository snapshot to generate the Supermodel Intermediate Representation (SIR) artifact bundle.
+      operationId: generateSupermodelGraph
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Zipped repository archive containing the code to analyze.
+      x-codeSamples:
+        - lang: cURL
+          label: cURL
+          source: |
+            curl -X POST 'https://api.supermodeltools.com/v1/graphs/supermodel' \
+              -H 'Idempotency-Key: <idempotency-key>' \
+              -H 'X-Api-Key: <api-key>' \
+              -F 'file=@/path/to/your/repo-snapshot.zip;type=application/zip'
+        - lang: javascript
+          label: JavaScript (fetch)
+          source: |
+            import { readFile } from 'node:fs/promises';
+            const baseUrl = process.env.API_BASE_URL || 'https://api.supermodeltools.com';
+            const apiKey = '<api-key>';
+            const idempotencyKey = '<idempotency-key>';
+            const archivePath = '/path/to/your/repo-snapshot.zip';
+
+            const buffer = await readFile(archivePath);
+            const form = new FormData();
+            form.append('file', new Blob([buffer], { type: 'application/zip' }), 'repo-snapshot.zip');
+
+            const res = await fetch(`${baseUrl}/v1/graphs/supermodel`, {
+              method: 'POST',
+              headers: {
+                'Idempotency-Key': idempotencyKey,
+                'X-Api-Key': apiKey
+              },
+              body: form
+            });
+
+            if (!res.ok) throw new Error(await res.text());
+            console.log(await res.json());
+        - lang: typescript
+          label: TypeScript (SDK)
+          source: |
+            import { Configuration, DefaultApi } from '@supermodel/public-api-typescript';
+            import { readFile } from 'node:fs/promises';
+
+            const baseUrl = process.env.API_BASE_URL || 'https://api.supermodeltools.com';
+            const apiKey = '<api-key>';
+            const idempotencyKey = '<idempotency-key>';
+            const archivePath = '/path/to/your/repo-snapshot.zip';
+
+            const buffer = await readFile(archivePath);
+            const archiveBlob = new Blob([buffer], { type: 'application/zip' });
+
+            const configuration = new Configuration({ basePath: baseUrl });
+
+            const apiKeyOverride = async ({ init }) => ({
+              headers: { ...(init.headers ?? {}), 'X-Api-Key': apiKey }
+            });
+
+            const api = new DefaultApi(configuration);
+            const result = await api.generateSupermodelGraph(
+              { idempotencyKey, file: archiveBlob },
+              apiKeyOverride
+            );
+
+            console.log(result);
+        - lang: java
+          label: Java (generated client)
+          source: |
+            import org.openapitools.client.ApiClient;
+            import org.openapitools.client.api.DefaultApi;
+
+            import java.io.File;
+
+            public class Example {
+              public static void main(String[] args) throws Exception {
+                String baseUrl = System.getenv().getOrDefault("API_BASE_URL", "https://api.supermodeltools.com");
+                String apiKey = "<api-key>";
+                String idempotencyKey = "<idempotency-key>";
+                File archive = new File("/path/to/your/repo-snapshot.zip");
+
+                ApiClient client = new ApiClient();
+                client.updateBaseUri(baseUrl);
+                client.setRequestInterceptor(rb -> {
+                  rb.header("X-Api-Key", apiKey);
+                });
+
+                DefaultApi api = new DefaultApi(client);
+                api.generateSupermodelGraph(idempotencyKey, archive);
+              }
+            }
+        - lang: python
+          label: Python (generated client)
+          source: |
+            import os
+            from supermodel_public_api import ApiClient, Configuration
+            from supermodel_public_api.api.default_api import DefaultApi
+
+            base_url = os.environ.get("API_BASE_URL", "https://api.supermodeltools.com")
+            api_key = "<api-key>"
+            idempotency_key = "<idempotency-key>"
+
+            configuration = Configuration(host=base_url)
+            configuration.api_key["ApiKeyAuth"] = api_key
+
+            api_client = ApiClient(configuration)
+            api = DefaultApi(api_client)
+
+            with open("/path/to/your/repo-snapshot.zip", "rb") as f:
+              payload = f.read()
+
+            result = api.generate_supermodel_graph(idempotency_key, file=payload)
+            print(result)
+        - lang: rust
+          label: Rust (reqwest)
+          source: |
+            use bytes::Bytes;
+            use reqwest::multipart::{Form, Part};
+
+            #[tokio::main]
+            async fn main() -> anyhow::Result<()> {
+              let base_url = std::env::var("API_BASE_URL")
+                .unwrap_or_else(|_| "https://api.supermodeltools.com".to_string());
+              let api_key = "<api-key>";
+              let idempotency_key = "<idempotency-key>";
+
+              let archive_bytes = Bytes::from(tokio::fs::read("/path/to/your/repo-snapshot.zip").await?);
+              let url = format!("{}/v1/graphs/supermodel", base_url.trim_end_matches('/'));
+
+              let file_part = Part::bytes(archive_bytes.to_vec())
+                .file_name("repo.zip")
+                .mime_str("application/zip")?;
+              let form = Form::new().part("file", file_part);
+
+              let response = reqwest::Client::new()
+                .post(url)
+                .header("Idempotency-Key", idempotency_key)
+                .header("X-Api-Key", api_key)
+                .multipart(form)
+                .send()
+                .await?;
+              let status = response.status();
+              let body = response.bytes().await?;
+
+              if status.is_success() {
+                println!("{}", String::from_utf8_lossy(&body));
+              } else {
+                anyhow::bail!(
+                  "Request failed ({}): {}",
+                  status.as_u16(),
+                  String::from_utf8_lossy(&body)
+                );
+              }
+
+              Ok(())
+            }
+      responses:
+        '200':
+          description: Supermodel IR document
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Usage-Units:
+              $ref: '#/components/headers/X-Usage-Units'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupermodelIR'
+              example:
+                repo: supermodel/supermodel-public-api
+                version: sir-2025-02-05
+                schemaVersion: 1.2.0
+                generatedAt: '2025-02-05 15:42:10.000000000 Z'
+                summary:
+                  repoSizeBytes: 123456
+                  filesProcessed: 42
+                  classes: 8
+                  functions: 156
+                  types: 12
+                  primaryLanguage: typescript
+                  domains: 5
+                graph:
+                  nodes:
+                    - id: src/index.ts
+                      labels:
+                        - File
+                      properties:
+                        path: src/index.ts
+                        name: index.ts
+                        language: typescript
+                    - id: fn:src/index.ts:main
+                      labels:
+                        - Function
+                      properties:
+                        name: main
+                        filePath: src/index.ts
+                        startLine: 10
+                        endLine: 25
+                    - id: fn:src/utils.ts:helper
+                      labels:
+                        - Function
+                      properties:
+                        name: helper
+                        filePath: src/utils.ts
+                    - id: domain:Core
+                      labels:
+                        - Domain
+                      properties:
+                        name: Core
+                        description: Core application logic
+                    - id: subdomain:Core:Initialization
+                      labels:
+                        - Subdomain
+                      properties:
+                        name: Initialization
+                        parentDomain: Core
+                  relationships:
+                    - id: src/index.ts_contains_fn:src/index.ts:main
+                      type: contains
+                      startNode: src/index.ts
+                      endNode: fn:src/index.ts:main
+                    - id: src/index.ts_imports_src/utils.ts
+                      type: imports
+                      startNode: src/index.ts
+                      endNode: src/utils.ts
+                    - id: fn:src/index.ts:main_calls_fn:src/utils.ts:helper
+                      type: calls
+                      startNode: fn:src/index.ts:main
+                      endNode: fn:src/utils.ts:helper
+                    - id: fn:src/index.ts:main_belongsTo_subdomain:Core:Initialization
+                      type: belongsTo
+                      startNode: fn:src/index.ts:main
+                      endNode: subdomain:Core:Initialization
+                artifacts:
+                  - id: artifact-usage-summary
+                    kind: summary
+                    label: Usage Insights
+                    metadata:
+                      repoSizeBytes: 123456
+                      filesProcessed: 42
+                      functions: 156
+                      classes: 8
+                  - id: parse-graph
+                    kind: graph
+                    label: Parse Graph
+                    metadata:
+                      nodeCount: 150
+                      relationshipCount: 280
+                  - id: call-graph
+                    kind: graph
+                    label: Call Graph
+                    metadata:
+                      totalFunctions: 156
+                      totalCalls: 423
+                  - id: domain-classification
+                    kind: classification
+                    label: Domain Classification
+                    metadata:
+                      domainCount: 5
+                      relationshipCount: 8
+                      fileAssignments: 42
+                      functionAssignments: 120
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          description: Bad Gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: API key issued by the control plane for accessing data plane resources.
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: HTTP Bearer authentication using an OAuth provider-issued access token presented via the Authorization header.
+    StripeSecret:
+      type: apiKey
+      in: header
+      name: Stripe-Secret
+      description: Shared secret used to authorize Stripe webhook callbacks.
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Unique identifier for this request for idempotency and tracing.
+      schema:
+        type: string
+  headers:
+    X-Request-Id:
+      description: Unique request identifier echoed back from the Idempotency-Key header.
+      schema:
+        type: string
+    X-API-Version:
+      description: Semantic version of the API service handling the request.
+      schema:
+        type: string
+    RateLimit-Limit:
+      description: Maximum number of requests allowed in the current rate limit window.
+      schema:
+        type: integer
+        format: int32
+    RateLimit-Remaining:
+      description: Remaining number of requests available in the current rate limit window.
+      schema:
+        type: integer
+        format: int32
+    RateLimit-Reset:
+      description: UTC epoch seconds when the current rate limit window resets.
+      schema:
+        type: integer
+        format: int64
+    X-Usage-Units:
+      description: Metered usage units consumed by this request.
+      schema:
+        type: number
+        format: float
+  responses:
+    BadRequest:
+      description: The request could not be processed because of a client error.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+        X-API-Version:
+          $ref: '#/components/headers/X-API-Version'
+        RateLimit-Limit:
+          $ref: '#/components/headers/RateLimit-Limit'
+        RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimit-Remaining'
+        RateLimit-Reset:
+          $ref: '#/components/headers/RateLimit-Reset'
+        X-Usage-Units:
+          $ref: '#/components/headers/X-Usage-Units'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: 400
+            code: invalid_request
+            message: Missing required query parameter 'repo'.
+            timestamp: '2025-02-05 16:35:12.000000000 Z'
+            requestId: req_01HZYJ9CE0ABCDEF1234
+            details:
+              - field: repo
+                issue: This field is required.
+                location: query
+    Unauthorized:
+      description: Authentication failed or was not provided.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+        X-API-Version:
+          $ref: '#/components/headers/X-API-Version'
+        RateLimit-Limit:
+          $ref: '#/components/headers/RateLimit-Limit'
+        RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimit-Remaining'
+        RateLimit-Reset:
+          $ref: '#/components/headers/RateLimit-Reset'
+        X-Usage-Units:
+          $ref: '#/components/headers/X-Usage-Units'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: 401
+            code: unauthorized
+            message: Provide a valid OAuth token to access this resource.
+            timestamp: '2025-02-05 16:35:12.000000000 Z'
+            requestId: req_01HZYJ9CE0ABCDEFXYZ1
+    Forbidden:
+      description: The authenticated principal lacks the required permissions.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+        X-API-Version:
+          $ref: '#/components/headers/X-API-Version'
+        RateLimit-Limit:
+          $ref: '#/components/headers/RateLimit-Limit'
+        RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimit-Remaining'
+        RateLimit-Reset:
+          $ref: '#/components/headers/RateLimit-Reset'
+        X-Usage-Units:
+          $ref: '#/components/headers/X-Usage-Units'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: 403
+            code: forbidden
+            message: The token lacks the required keys:write scope.
+            timestamp: '2025-02-05 16:35:12.000000000 Z'
+            requestId: req_01HZYJ9CE0ABCDEFFORB
+    NotFound:
+      description: The requested resource could not be found.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+        X-API-Version:
+          $ref: '#/components/headers/X-API-Version'
+        RateLimit-Limit:
+          $ref: '#/components/headers/RateLimit-Limit'
+        RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimit-Remaining'
+        RateLimit-Reset:
+          $ref: '#/components/headers/RateLimit-Reset'
+        X-Usage-Units:
+          $ref: '#/components/headers/X-Usage-Units'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: 404
+            code: not_found
+            message: API key ak_live_missing was not found.
+            timestamp: '2025-02-05 16:35:12.000000000 Z'
+            requestId: req_01HZYJ9CE0ABCDEFF404
+    TooManyRequests:
+      description: The rate limit for the resource has been exceeded.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+        X-API-Version:
+          $ref: '#/components/headers/X-API-Version'
+        RateLimit-Limit:
+          $ref: '#/components/headers/RateLimit-Limit'
+        RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimit-Remaining'
+        RateLimit-Reset:
+          $ref: '#/components/headers/RateLimit-Reset'
+        X-Usage-Units:
+          $ref: '#/components/headers/X-Usage-Units'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: 429
+            code: rate_limit_exceeded
+            message: Too many requests. Try again after the reset window.
+            timestamp: '2025-02-05 16:35:12.000000000 Z'
+            requestId: req_01HZYJ9CE0ABCDEFRATE
+    InternalError:
+      description: The server encountered an unexpected condition.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+        X-API-Version:
+          $ref: '#/components/headers/X-API-Version'
+        RateLimit-Limit:
+          $ref: '#/components/headers/RateLimit-Limit'
+        RateLimit-Remaining:
+          $ref: '#/components/headers/RateLimit-Remaining'
+        RateLimit-Reset:
+          $ref: '#/components/headers/RateLimit-Reset'
+        X-Usage-Units:
+          $ref: '#/components/headers/X-Usage-Units'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: 500
+            code: internal_error
+            message: Unexpected error processing request. Please retry.
+            timestamp: '2025-02-05 16:35:12.000000000 Z'
+            requestId: req_01HZYJ9CE0ABCDEFFAIL
+  schemas:
+    CodeGraphNode:
+      type: object
+      properties:
+        id:
+          type: string
+        labels:
+          type: array
+          items:
+            type: string
+        properties:
+          type: object
+          additionalProperties: true
+      required:
+        - id
+    CodeGraphRelationship:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        startNode:
+          type: string
+        endNode:
+          type: string
+        properties:
+          type: object
+          additionalProperties: true
+      required:
+        - id
+        - type
+        - startNode
+        - endNode
+    CodeGraphStats:
+      type: object
+      properties:
+        filesProcessed:
+          type: integer
+          format: int64
+        classes:
+          type: integer
+          format: int64
+        functions:
+          type: integer
+          format: int64
+        types:
+          type: integer
+          format: int64
+        processingTimeMs:
+          type: number
+    CodeGraphEnvelope:
+      type: object
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        message:
+          type: string
+        stats:
+          $ref: '#/components/schemas/CodeGraphStats'
+        graph:
+          type: object
+          properties:
+            nodes:
+              type: array
+              items:
+                $ref: '#/components/schemas/CodeGraphNode'
+            relationships:
+              type: array
+              items:
+                $ref: '#/components/schemas/CodeGraphRelationship'
+          required:
+            - nodes
+            - relationships
+      required:
+        - graph
+    Error:
+      type: object
+      description: Standardized error payload returned by the API.
+      required:
+        - status
+        - code
+        - message
+        - timestamp
+      properties:
+        status:
+          type: integer
+          format: int32
+          description: HTTP status code associated with the error.
+          minimum: 100
+          maximum: 599
+        code:
+          type: string
+          description: Stable, machine-readable error identifier.
+        message:
+          type: string
+          description: Human-readable description of the error.
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp indicating when the error occurred.
+        requestId:
+          type: string
+          description: Correlation identifier for tracing the failing request.
+        details:
+          type: array
+          description: Optional list of contextual error details.
+          items:
+            type: object
+            required:
+              - field
+              - issue
+            properties:
+              field:
+                type: string
+                description: Name of the field or parameter related to the error.
+              issue:
+                type: string
+                description: Description of the specific issue encountered.
+              location:
+                type: string
+                description: Where the field resides (e.g., query, path, body).
+    SupermodelArtifact:
+      type: object
+      required:
+        - id
+        - kind
+        - label
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the artifact.
+        kind:
+          type: string
+          description: Artifact kind such as graph, summary, or embedding.
+        label:
+          type: string
+          description: Human-readable name for the artifact.
+        metadata:
+          type: object
+          description: Additional metadata for consuming the artifact.
+          additionalProperties: true
+    SupermodelIR:
+      type: object
+      required:
+        - repo
+        - version
+        - schemaVersion
+        - generatedAt
+        - graph
+      properties:
+        repo:
+          type: string
+          description: Repository slug the IR was generated from.
+        version:
+          type: string
+          description: Version identifier for the IR content.
+        schemaVersion:
+          type: string
+          description: Version of the IR schema.
+        generatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the IR was generated.
+        summary:
+          type: object
+          description: High-level metadata and summary insights including filesProcessed, classes, functions, types, primaryLanguage, and domains count.
+          additionalProperties: true
+        graph:
+          type: object
+          description: Unified code graph containing all nodes and relationships.
+          properties:
+            nodes:
+              type: array
+              description: All nodes from parse graph, call graph, and domain classification.
+              items:
+                $ref: '#/components/schemas/CodeGraphNode'
+            relationships:
+              type: array
+              description: All relationships including contains, imports, calls, and belongsTo.
+              items:
+                $ref: '#/components/schemas/CodeGraphRelationship'
+          required:
+            - nodes
+            - relationships
+        artifacts:
+          type: array
+          description: Per-source statistics and metadata for parse graph, call graph, and domain classification.
+          items:
+            $ref: '#/components/schemas/SupermodelArtifact'
+    DomainClassificationResponse:
+      type: object
+      properties:
+        runId:
+          type: string
+          description: Unique identifier for this classification run
+        domains:
+          type: array
+          items:
+            $ref: '#/components/schemas/DomainSummary'
+          description: Array of primary domain entities
+        relationships:
+          type: array
+          items:
+            $ref: '#/components/schemas/DomainRelationship'
+          description: High-level relationships between domains/subdomains
+        fileAssignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/DomainFileAssignment'
+          description: Mapping of files to domains
+        functionAssignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/DomainFunctionAssignment'
+          description: Mapping of functions to subdomains
+        unassignedFunctions:
+          type: array
+          items:
+            $ref: '#/components/schemas/UnassignedFunction'
+          description: Functions that could not be assigned to a domain/subdomain
+        classAssignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/DomainClassAssignment'
+          description: Mapping of classes to domains
+        functionDescriptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/FunctionDescription'
+          description: Optional enriched descriptions per function
+        stats:
+          $ref: '#/components/schemas/ClassificationStats'
+      required:
+        - runId
+        - domains
+        - relationships
+        - fileAssignments
+        - functionAssignments
+        - unassignedFunctions
+        - classAssignments
+        - stats
+    DomainSummary:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Domain name (e.g., BillingAccount)
+        descriptionSummary:
+          type: string
+          description: Human-readable description of the domain
+        keyFiles:
+          type: array
+          items:
+            type: string
+          description: Representative files backing the domain
+        responsibilities:
+          type: array
+          items:
+            type: string
+          description: Key responsibilities/concerns of the domain
+        subdomains:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubdomainSummary'
+          description: Subdomains for this domain
+      required:
+        - name
+        - descriptionSummary
+        - keyFiles
+        - responsibilities
+        - subdomains
+    SubdomainSummary:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Subdomain name
+        descriptionSummary:
+          type: string
+          description: Concise description of the subdomain
+      required:
+        - name
+        - descriptionSummary
+    DomainRelationship:
+      type: object
+      properties:
+        from:
+          type: string
+          description: Source domain or subdomain name/id
+        to:
+          type: string
+          description: Target domain or subdomain name/id
+        type:
+          type: string
+          description: Relationship type (e.g., aggregates, dependsOn, relatesTo)
+        strength:
+          type: number
+          description: Numeric strength/weight (0-1 or small integer)
+        reason:
+          type: string
+          description: Optional explanation for the relationship
+      required:
+        - from
+        - to
+        - type
+        - strength
+    DomainFileAssignment:
+      type: object
+      properties:
+        filePath:
+          type: string
+          description: Repository-relative file path
+        domainName:
+          type: string
+          description: Assigned domain
+      required:
+        - filePath
+        - domainName
+    DomainFunctionAssignment:
+      type: object
+      properties:
+        functionId:
+          type: string
+          description: Stable function identifier (matching codegraph/function models)
+        subdomainName:
+          type: string
+          description: Subdomain assigned to the function
+        parentDomain:
+          type: string
+          description: Optional parent domain containing the subdomain
+      required:
+        - functionId
+        - subdomainName
+    UnassignedFunction:
+      type: object
+      properties:
+        functionId:
+          type: string
+          description: Function that could not be assigned
+        reason:
+          type: string
+          description: Reason it was left unassigned
+      required:
+        - functionId
+        - reason
+    DomainClassAssignment:
+      type: object
+      properties:
+        classId:
+          type: string
+          description: Class identifier
+        domainName:
+          type: string
+          description: Assigned domain
+      required:
+        - classId
+        - domainName
+    FunctionDescription:
+      type: object
+      properties:
+        functionId:
+          type: string
+          description: Function identifier
+        descriptionSummary:
+          type: string
+          description: Short summary of behavior
+        domainName:
+          type: string
+          description: Optional domain/subdomain association
+      required:
+        - functionId
+        - descriptionSummary
+    ClassificationStats:
+      type: object
+      properties:
+        domainCount:
+          type: integer
+          description: Number of domains discovered
+        relationshipCount:
+          type: integer
+          description: Number of relationships
+        fileAssignments:
+          type: integer
+          description: Count of file assignments
+        functionAssignments:
+          type: integer
+          description: Count of function assignments
+        unassignedFunctions:
+          type: integer
+          description: Count of unassigned functions
+        classAssignments:
+          type: integer
+          description: Count of class assignments
+      required:
+        - domainCount
+        - relationshipCount
+        - fileAssignments
+        - functionAssignments
+        - unassignedFunctions
+        - classAssignments
