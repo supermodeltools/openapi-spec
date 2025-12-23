@@ -1,0 +1,15 @@
+{
+  "name": "@supermodel/openapi-spec",
+  "version": "0.3.4",
+  "description": "Supermodel Public OpenAPI Specification",
+  "main": "openapi.yaml",
+  "files": [
+    "openapi.yaml"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/supermodeltools/openapi-spec.git"
+  },
+  "author": "Supermodel <abe@supermodel.software>",
+  "license": "UNLICENSED"
+}
