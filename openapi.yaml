@@ -3,9 +3,16 @@ info:
   title: Supermodel
   description: Code Graphing & Analysis API
   version: 0.3.8
+  contact:
+    name: Supermodel Support
+    url: https://supermodeltools.com
+    email: support@supermodel.software
   license:
     name: Supermodel API Terms of Service
     url: https://supermodeltools.com/legal/api-terms
+externalDocs:
+  description: API Documentation
+  url: https://docs.supermodeltools.com
 servers:
   - url: https://api.supermodeltools.com
     description: Production server
