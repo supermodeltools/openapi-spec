@@ -27,7 +27,7 @@ All endpoints accept a zipped repository snapshot and return graph data as JSON.
 
 ## Authentication
 
-Requests require an API key via `X-Api-Key` header. Get your key from the [Supermodel Dashboard](https://supermodeltools.com/dashboard).
+Requests require an API key via `X-Api-Key` header. Get your key from the [Supermodel Dashboard](https://dashboard.supermodeltools.com).
 
 ## Links
 
