@@ -2,6 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/@supermodeltools/openapi-spec)](https://www.npmjs.com/package/@supermodeltools/openapi-spec)
 [![OpenAPI](https://img.shields.io/badge/OpenAPI-3.0-green)](https://spec.openapis.org/oas/v3.0.0)
+[![Validate OpenAPI](https://github.com/supermodeltools/openapi-spec/actions/workflows/validate.yml/badge.svg)](https://github.com/supermodeltools/openapi-spec/actions/workflows/validate.yml)
 
 OpenAPI 3.0 specification for the [Supermodel API](https://docs.supermodeltools.com) - code graphing and static analysis.
 
