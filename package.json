@@ -10,6 +10,20 @@
     "type": "git",
     "url": "git+https://github.com/supermodeltools/openapi-spec.git"
   },
+  "homepage": "https://docs.supermodeltools.com",
+  "bugs": {
+    "url": "https://github.com/supermodeltools/openapi-spec/issues"
+  },
+  "keywords": [
+    "openapi",
+    "api",
+    "code-graph",
+    "dependency-graph",
+    "call-graph",
+    "static-analysis",
+    "code-analysis",
+    "supermodel"
+  ],
   "author": "Supermodel <abe@supermodel.software>",
   "license": "UNLICENSED"
 }
