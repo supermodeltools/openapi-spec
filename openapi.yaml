@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Supermodel
   description: Code Graphing & Analysis API
-  version: 0.5.0
+  version: 0.5.1
   license:
     name: Supermodel API Terms of Service
     url: https://supermodeltools.com/legal/api-terms
