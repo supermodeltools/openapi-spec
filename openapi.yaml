@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Supermodel
   description: Code Graphing & Analysis API
-  version: 0.5.4
+  version: 0.6.0
   license:
     name: Supermodel API Terms of Service
     url: https://supermodeltools.com/legal/api-terms
@@ -188,7 +188,7 @@ paths:
             }
       responses:
         '200':
-          description: Dependency graph
+          description: Dependency graph (job completed)
           headers:
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
@@ -205,36 +205,58 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CodeGraphEnvelope'
+                $ref: '#/components/schemas/CodeGraphEnvelopeAsync'
               example:
-                generatedAt: '2025-02-05 15:42:10.000000000 Z'
-                message: Graph generated successfully
-                stats:
-                  filesProcessed: 2
-                  classes: 0
-                  functions: 0
-                  types: 0
-                  processingTimeMs: 15
-                graph:
-                  nodes:
-                    - id: src/main.js
-                      labels:
-                        - File
-                      properties:
-                        path: src/main.js
-                        name: main.js
-                    - id: src/math.js
-                      labels:
-                        - File
-                      properties:
-                        path: src/math.js
-                        name: math.js
-                  relationships:
-                    - id: src/main.js_imports_src/math.js
-                      type: imports
-                      startNode: src/main.js
-                      endNode: src/math.js
-                      properties: {}
+                status: completed
+                jobId: abc-123-def
+                result:
+                  generatedAt: '2025-02-05 15:42:10.000000000 Z'
+                  message: Graph generated successfully
+                  stats:
+                    filesProcessed: 2
+                    classes: 0
+                    functions: 0
+                    types: 0
+                    processingTimeMs: 15
+                  graph:
+                    nodes:
+                      - id: src/main.js
+                        labels:
+                          - File
+                        properties:
+                          path: src/main.js
+                          name: main.js
+                      - id: src/math.js
+                        labels:
+                          - File
+                        properties:
+                          path: src/math.js
+                          name: math.js
+                    relationships:
+                      - id: src/main.js_imports_src/math.js
+                        type: imports
+                        startNode: src/main.js
+                        endNode: src/math.js
+                        properties: {}
+        '202':
+          description: Job accepted and processing
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            Retry-After:
+              description: Recommended wait time in seconds before polling again.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeGraphEnvelopeAsync'
+              example:
+                status: processing
+                jobId: abc-123-def
+                retryAfter: 5
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -428,7 +450,7 @@ paths:
             }
       responses:
         '200':
-          description: Call graph
+          description: Call graph (job completed)
           headers:
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
@@ -445,35 +467,57 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CodeGraphEnvelope'
+                $ref: '#/components/schemas/CodeGraphEnvelopeAsync'
               example:
-                generatedAt: '2025-02-05 15:42:10.000000000 Z'
-                message: Call graph generated successfully
-                stats:
-                  filesProcessed: 2
-                  classes: 0
-                  functions: 2
-                  types: 0
-                  processingTimeMs: 8
-                graph:
-                  nodes:
-                    - id: fn:index.ts:init
-                      labels:
-                        - Function
-                      properties:
-                        file: src/index.ts
-                    - id: fn:service.ts:handle
-                      labels:
-                        - Function
-                      properties:
-                        file: src/service.ts
-                  relationships:
-                    - id: fn:index.ts:init_calls_fn:service.ts:handle
-                      type: calls
-                      startNode: fn:index.ts:init
-                      endNode: fn:service.ts:handle
-                      properties:
-                        count: 4
+                status: completed
+                jobId: abc-123-def
+                result:
+                  generatedAt: '2025-02-05 15:42:10.000000000 Z'
+                  message: Call graph generated successfully
+                  stats:
+                    filesProcessed: 2
+                    classes: 0
+                    functions: 2
+                    types: 0
+                    processingTimeMs: 8
+                  graph:
+                    nodes:
+                      - id: fn:index.ts:init
+                        labels:
+                          - Function
+                        properties:
+                          file: src/index.ts
+                      - id: fn:service.ts:handle
+                        labels:
+                          - Function
+                        properties:
+                          file: src/service.ts
+                    relationships:
+                      - id: fn:index.ts:init_calls_fn:service.ts:handle
+                        type: calls
+                        startNode: fn:index.ts:init
+                        endNode: fn:service.ts:handle
+                        properties:
+                          count: 4
+        '202':
+          description: Job accepted and processing
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            Retry-After:
+              description: Recommended wait time in seconds before polling again.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeGraphEnvelopeAsync'
+              example:
+                status: processing
+                jobId: abc-123-def
+                retryAfter: 5
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -667,7 +711,7 @@ paths:
             }
       responses:
         '200':
-          description: Domain graph
+          description: Domain graph (job completed)
           headers:
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
@@ -684,63 +728,85 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DomainClassificationResponse'
+                $ref: '#/components/schemas/DomainClassificationResponseAsync'
               example:
-                runId: smart-sampling-a1b2c3d4
-                domains:
-                  - name: BillingAccount
-                    descriptionSummary: Handles billing and account management
-                    keyFiles:
-                      - src/domain/billing.ts
-                      - src/services/billing.service.ts
-                    responsibilities:
-                      - Account creation
-                      - Payment processing
-                    subdomains:
-                      - name: PaymentProcessing
-                        descriptionSummary: Processes payment transactions
-                  - name: UsageSummary
-                    descriptionSummary: Tracks and summarizes usage metrics
-                    keyFiles:
-                      - src/domain/usage.ts
-                    responsibilities:
-                      - Usage tracking
-                      - Metrics aggregation
-                    subdomains: []
-                relationships:
-                  - from: BillingAccount
-                    to: UsageSummary
-                    type: aggregates
-                    strength: 0.8
-                    reason: BillingAccount aggregates usage data for billing purposes
-                fileAssignments:
-                  - filePath: src/domain/billing.ts
-                    domainName: BillingAccount
-                  - filePath: src/domain/usage.ts
-                    domainName: UsageSummary
-                functionAssignments:
-                  - functionId: func-123
-                    subdomainName: PaymentProcessing
-                    parentDomain: BillingAccount
-                unassignedFunctions:
-                  - functionId: func-456
-                    reason: Utility function with unclear domain association
-                classAssignments:
-                  - classId: class-789
-                    domainName: BillingAccount
-                functionDescriptions:
-                  - functionId: func-123
-                    descriptionSummary: Processes incoming payment transactions
-                    domainName: BillingAccount
-                  - functionId: func-456
-                    descriptionSummary: Aggregates usage metrics for billing period
-                stats:
-                  domainCount: 2
-                  relationshipCount: 1
-                  fileAssignments: 2
-                  functionAssignments: 1
-                  unassignedFunctions: 1
-                  classAssignments: 1
+                status: completed
+                jobId: abc-123-def
+                result:
+                  runId: smart-sampling-a1b2c3d4
+                  domains:
+                    - name: BillingAccount
+                      descriptionSummary: Handles billing and account management
+                      keyFiles:
+                        - src/domain/billing.ts
+                        - src/services/billing.service.ts
+                      responsibilities:
+                        - Account creation
+                        - Payment processing
+                      subdomains:
+                        - name: PaymentProcessing
+                          descriptionSummary: Processes payment transactions
+                    - name: UsageSummary
+                      descriptionSummary: Tracks and summarizes usage metrics
+                      keyFiles:
+                        - src/domain/usage.ts
+                      responsibilities:
+                        - Usage tracking
+                        - Metrics aggregation
+                      subdomains: []
+                  relationships:
+                    - from: BillingAccount
+                      to: UsageSummary
+                      type: aggregates
+                      strength: 0.8
+                      reason: BillingAccount aggregates usage data for billing purposes
+                  fileAssignments:
+                    - filePath: src/domain/billing.ts
+                      domainName: BillingAccount
+                    - filePath: src/domain/usage.ts
+                      domainName: UsageSummary
+                  functionAssignments:
+                    - functionId: func-123
+                      subdomainName: PaymentProcessing
+                      parentDomain: BillingAccount
+                  unassignedFunctions:
+                    - functionId: func-456
+                      reason: Utility function with unclear domain association
+                  classAssignments:
+                    - classId: class-789
+                      domainName: BillingAccount
+                  functionDescriptions:
+                    - functionId: func-123
+                      descriptionSummary: Processes incoming payment transactions
+                      domainName: BillingAccount
+                    - functionId: func-456
+                      descriptionSummary: Aggregates usage metrics for billing period
+                  stats:
+                    domainCount: 2
+                    relationshipCount: 1
+                    fileAssignments: 2
+                    functionAssignments: 1
+                    unassignedFunctions: 1
+                    classAssignments: 1
+        '202':
+          description: Job accepted and processing
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            Retry-After:
+              description: Recommended wait time in seconds before polling again.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainClassificationResponseAsync'
+              example:
+                status: processing
+                jobId: abc-123-def
+                retryAfter: 5
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -934,7 +1000,7 @@ paths:
             }
       responses:
         '200':
-          description: Parse graph
+          description: Parse graph (job completed)
           headers:
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
@@ -951,35 +1017,57 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CodeGraphEnvelope'
+                $ref: '#/components/schemas/CodeGraphEnvelopeAsync'
               example:
-                generatedAt: '2025-02-05 15:42:10.000000000 Z'
-                message: Parse graph generated successfully
-                stats:
-                  filesProcessed: 1
-                  classes: 0
-                  functions: 1
-                  types: 0
-                  processingTimeMs: 12
-                graph:
-                  nodes:
-                    - id: ast:src/index.ts:1:0
-                      labels:
-                        - Program
-                      properties:
-                        kind: Program
-                    - id: ast:src/index.ts:3:2
-                      labels:
-                        - FunctionDeclaration
-                      properties:
-                        name: init
-                  relationships:
-                    - id: ast:src/index.ts:1:0_contains_ast:src/index.ts:3:2
-                      type: contains
-                      startNode: ast:src/index.ts:1:0
-                      endNode: ast:src/index.ts:3:2
-                      properties:
-                        order: 1
+                status: completed
+                jobId: abc-123-def
+                result:
+                  generatedAt: '2025-02-05 15:42:10.000000000 Z'
+                  message: Parse graph generated successfully
+                  stats:
+                    filesProcessed: 1
+                    classes: 0
+                    functions: 1
+                    types: 0
+                    processingTimeMs: 12
+                  graph:
+                    nodes:
+                      - id: ast:src/index.ts:1:0
+                        labels:
+                          - Program
+                        properties:
+                          kind: Program
+                      - id: ast:src/index.ts:3:2
+                        labels:
+                          - FunctionDeclaration
+                        properties:
+                          name: init
+                    relationships:
+                      - id: ast:src/index.ts:1:0_contains_ast:src/index.ts:3:2
+                        type: contains
+                        startNode: ast:src/index.ts:1:0
+                        endNode: ast:src/index.ts:3:2
+                        properties:
+                          order: 1
+        '202':
+          description: Job accepted and processing
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            Retry-After:
+              description: Recommended wait time in seconds before polling again.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeGraphEnvelopeAsync'
+              example:
+                status: processing
+                jobId: abc-123-def
+                retryAfter: 5
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1173,7 +1261,7 @@ paths:
             }
       responses:
         '200':
-          description: Supermodel IR document
+          description: Supermodel IR document (job completed)
           headers:
             X-Request-Id:
               $ref: '#/components/headers/X-Request-Id'
@@ -1190,101 +1278,123 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SupermodelIR'
+                $ref: '#/components/schemas/SupermodelIRAsync'
               example:
-                repo: supermodel/supermodel-public-api
-                version: sir-2025-02-05
-                schemaVersion: 1.2.0
-                generatedAt: '2025-02-05 15:42:10.000000000 Z'
-                summary:
-                  repoSizeBytes: 123456
-                  filesProcessed: 42
-                  classes: 8
-                  functions: 156
-                  types: 12
-                  primaryLanguage: typescript
-                  domains: 5
-                graph:
-                  nodes:
-                    - id: src/index.ts
-                      labels:
-                        - File
-                      properties:
-                        path: src/index.ts
-                        name: index.ts
-                        language: typescript
-                    - id: fn:src/index.ts:main
-                      labels:
-                        - Function
-                      properties:
-                        name: main
-                        filePath: src/index.ts
-                        startLine: 10
-                        endLine: 25
-                    - id: fn:src/utils.ts:helper
-                      labels:
-                        - Function
-                      properties:
-                        name: helper
-                        filePath: src/utils.ts
-                    - id: domain:Core
-                      labels:
-                        - Domain
-                      properties:
-                        name: Core
-                        description: Core application logic
-                    - id: subdomain:Core:Initialization
-                      labels:
-                        - Subdomain
-                      properties:
-                        name: Initialization
-                        parentDomain: Core
-                  relationships:
-                    - id: src/index.ts_contains_fn:src/index.ts:main
-                      type: contains
-                      startNode: src/index.ts
-                      endNode: fn:src/index.ts:main
-                    - id: src/index.ts_imports_src/utils.ts
-                      type: imports
-                      startNode: src/index.ts
-                      endNode: src/utils.ts
-                    - id: fn:src/index.ts:main_calls_fn:src/utils.ts:helper
-                      type: calls
-                      startNode: fn:src/index.ts:main
-                      endNode: fn:src/utils.ts:helper
-                    - id: fn:src/index.ts:main_belongsTo_subdomain:Core:Initialization
-                      type: belongsTo
-                      startNode: fn:src/index.ts:main
-                      endNode: subdomain:Core:Initialization
-                artifacts:
-                  - id: artifact-usage-summary
-                    kind: summary
-                    label: Usage Insights
-                    metadata:
-                      repoSizeBytes: 123456
-                      filesProcessed: 42
-                      functions: 156
-                      classes: 8
-                  - id: parse-graph
-                    kind: graph
-                    label: Parse Graph
-                    metadata:
-                      nodeCount: 150
-                      relationshipCount: 280
-                  - id: call-graph
-                    kind: graph
-                    label: Call Graph
-                    metadata:
-                      totalFunctions: 156
-                      totalCalls: 423
-                  - id: domain-classification
-                    kind: classification
-                    label: Domain Classification
-                    metadata:
-                      domainCount: 5
-                      relationshipCount: 8
-                      fileAssignments: 42
-                      functionAssignments: 120
+                status: completed
+                jobId: abc-123-def
+                result:
+                  repo: supermodel/supermodel-public-api
+                  version: sir-2025-02-05
+                  schemaVersion: 1.2.0
+                  generatedAt: '2025-02-05 15:42:10.000000000 Z'
+                  summary:
+                    repoSizeBytes: 123456
+                    filesProcessed: 42
+                    classes: 8
+                    functions: 156
+                    types: 12
+                    primaryLanguage: typescript
+                    domains: 5
+                  graph:
+                    nodes:
+                      - id: src/index.ts
+                        labels:
+                          - File
+                        properties:
+                          path: src/index.ts
+                          name: index.ts
+                          language: typescript
+                      - id: fn:src/index.ts:main
+                        labels:
+                          - Function
+                        properties:
+                          name: main
+                          filePath: src/index.ts
+                          startLine: 10
+                          endLine: 25
+                      - id: fn:src/utils.ts:helper
+                        labels:
+                          - Function
+                        properties:
+                          name: helper
+                          filePath: src/utils.ts
+                      - id: domain:Core
+                        labels:
+                          - Domain
+                        properties:
+                          name: Core
+                          description: Core application logic
+                      - id: subdomain:Core:Initialization
+                        labels:
+                          - Subdomain
+                        properties:
+                          name: Initialization
+                          parentDomain: Core
+                    relationships:
+                      - id: src/index.ts_contains_fn:src/index.ts:main
+                        type: contains
+                        startNode: src/index.ts
+                        endNode: fn:src/index.ts:main
+                      - id: src/index.ts_imports_src/utils.ts
+                        type: imports
+                        startNode: src/index.ts
+                        endNode: src/utils.ts
+                      - id: fn:src/index.ts:main_calls_fn:src/utils.ts:helper
+                        type: calls
+                        startNode: fn:src/index.ts:main
+                        endNode: fn:src/utils.ts:helper
+                      - id: fn:src/index.ts:main_belongsTo_subdomain:Core:Initialization
+                        type: belongsTo
+                        startNode: fn:src/index.ts:main
+                        endNode: subdomain:Core:Initialization
+                  artifacts:
+                    - id: artifact-usage-summary
+                      kind: summary
+                      label: Usage Insights
+                      metadata:
+                        repoSizeBytes: 123456
+                        filesProcessed: 42
+                        functions: 156
+                        classes: 8
+                    - id: parse-graph
+                      kind: graph
+                      label: Parse Graph
+                      metadata:
+                        nodeCount: 150
+                        relationshipCount: 280
+                    - id: call-graph
+                      kind: graph
+                      label: Call Graph
+                      metadata:
+                        totalFunctions: 156
+                        totalCalls: 423
+                    - id: domain-classification
+                      kind: classification
+                      label: Domain Classification
+                      metadata:
+                        domainCount: 5
+                        relationshipCount: 8
+                        fileAssignments: 42
+                        functionAssignments: 120
+        '202':
+          description: Job accepted and processing
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            Retry-After:
+              description: Recommended wait time in seconds before polling again.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupermodelIRAsync'
+              example:
+                status: processing
+                jobId: abc-123-def
+                retryAfter: 5
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1586,6 +1696,58 @@ components:
             - relationships
       required:
         - graph
+    JobStatus:
+      type: object
+      description: Common fields for async job status tracking.
+      required:
+        - status
+        - jobId
+      properties:
+        status:
+          type: string
+          description: Current status of the job.
+          enum:
+            - pending
+            - processing
+            - completed
+            - failed
+        jobId:
+          type: string
+          description: Unique identifier for the job.
+        retryAfter:
+          type: integer
+          format: int32
+          description: Recommended seconds to wait before polling again.
+        error:
+          type: string
+          description: Error message (present when status is failed).
+    CodeGraphEnvelopeAsync:
+      allOf:
+        - $ref: '#/components/schemas/JobStatus'
+        - type: object
+          description: Async response envelope for code graph operations.
+          properties:
+            result:
+              $ref: '#/components/schemas/CodeGraphEnvelope'
+              description: The result (present when status is completed).
+    DomainClassificationResponseAsync:
+      allOf:
+        - $ref: '#/components/schemas/JobStatus'
+        - type: object
+          description: Async response envelope for domain classification operations.
+          properties:
+            result:
+              $ref: '#/components/schemas/DomainClassificationResponse'
+              description: The result (present when status is completed).
+    SupermodelIRAsync:
+      allOf:
+        - $ref: '#/components/schemas/JobStatus'
+        - type: object
+          description: Async response envelope for Supermodel IR operations.
+          properties:
+            result:
+              $ref: '#/components/schemas/SupermodelIR'
+              description: The result (present when status is completed).
     Error:
       type: object
       description: Standardized error payload returned by the API.
