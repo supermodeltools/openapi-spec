@@ -1,6 +1,6 @@
 {
   "name": "@supermodeltools/openapi-spec",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Supermodel Public OpenAPI Specification",
   "main": "openapi.yaml",
   "files": [
