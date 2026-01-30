@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Supermodel
   description: Code Graphing & Analysis API
-  version: 0.6.4
+  version: 0.7.0
   license:
     name: Supermodel API Terms of Service
     url: https://supermodeltools.com/legal/api-terms
@@ -734,6 +734,32 @@ paths:
                 jobId: abc-123-def
                 result:
                   runId: smart-sampling-a1b2c3d4
+                  graph:
+                    nodes:
+                      - id: domain:BillingAccount
+                        labels:
+                          - Domain
+                        properties:
+                          name: BillingAccount
+                          description: Handles billing and account management
+                      - id: subdomain:BillingAccount:PaymentProcessing
+                        labels:
+                          - Subdomain
+                        properties:
+                          name: PaymentProcessing
+                          description: Processes payment transactions
+                    relationships:
+                      - id: domain:BillingAccount->contains->subdomain:BillingAccount:PaymentProcessing
+                        type: CONTAINS
+                        startNode: domain:BillingAccount
+                        endNode: subdomain:BillingAccount:PaymentProcessing
+                        properties: {}
+                  metadata:
+                    analysisStartTime: '2025-02-05T15:42:10Z'
+                    analysisEndTime: '2025-02-05T15:42:25Z'
+                    fileCount: 2
+                    languages:
+                      - typescript
                   domains:
                     - name: BillingAccount
                       descriptionSummary: Handles billing and account management
@@ -746,6 +772,11 @@ paths:
                       subdomains:
                         - name: PaymentProcessing
                           descriptionSummary: Processes payment transactions
+                          files:
+                            - src/services/billing.service.ts
+                          functions:
+                            - func-123
+                          classes: []
                     - name: UsageSummary
                       descriptionSummary: Tracks and summarizes usage metrics
                       keyFiles:
@@ -782,8 +813,18 @@ paths:
                     - functionId: func-456
                       descriptionSummary: Aggregates usage metrics for billing period
                   stats:
-                    domainCount: 2
+                    nodeCount: 2
                     relationshipCount: 1
+                    nodeTypes:
+                      Domain: 2
+                      Subdomain: 1
+                    relationshipTypes:
+                      CONTAINS: 1
+                    domainCount: 2
+                    subdomainCount: 1
+                    assignedFileCount: 1
+                    assignedFunctionCount: 1
+                    assignedClassCount: 0
                     fileAssignments: 2
                     functionAssignments: 1
                     unassignedFunctions: 1
@@ -1347,6 +1388,40 @@ paths:
                         type: belongsTo
                         startNode: fn:src/index.ts:main
                         endNode: subdomain:Core:Initialization
+                  stats:
+                    nodeCount: 5
+                    relationshipCount: 4
+                    nodeTypes:
+                      File: 1
+                      Function: 2
+                      Domain: 1
+                      Subdomain: 1
+                    relationshipTypes:
+                      contains: 1
+                      imports: 1
+                      calls: 1
+                      belongsTo: 1
+                  metadata:
+                    analysisStartTime: '2025-02-05T15:42:05Z'
+                    analysisEndTime: '2025-02-05T15:42:10Z'
+                    fileCount: 2
+                    languages:
+                      - typescript
+                  domains:
+                    - name: Core
+                      descriptionSummary: Core application logic
+                      keyFiles:
+                        - src/index.ts
+                      responsibilities:
+                        - Application initialization
+                      subdomains:
+                        - name: Initialization
+                          descriptionSummary: Application startup logic
+                          files:
+                            - src/index.ts
+                          functions:
+                            - fn:src/index.ts:main
+                          classes: []
                   artifacts:
                     - id: artifact-usage-summary
                       kind: summary
@@ -1656,6 +1731,24 @@ components:
     CodeGraphStats:
       type: object
       properties:
+        nodeCount:
+          type: integer
+          format: int64
+          description: Total number of nodes in the graph
+        relationshipCount:
+          type: integer
+          format: int64
+          description: Total number of relationships in the graph
+        nodeTypes:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Count of nodes by type
+        relationshipTypes:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Count of relationships by type
         filesProcessed:
           type: integer
           format: int64
@@ -1680,6 +1773,22 @@ components:
           type: string
         stats:
           $ref: '#/components/schemas/CodeGraphStats'
+        metadata:
+          type: object
+          properties:
+            analysisStartTime:
+              type: string
+              format: date-time
+            analysisEndTime:
+              type: string
+              format: date-time
+            fileCount:
+              type: integer
+            languages:
+              type: array
+              items:
+                type: string
+          description: Analysis metadata including timing and file information
         graph:
           type: object
           properties:
@@ -1822,6 +1931,9 @@ components:
         - schemaVersion
         - generatedAt
         - graph
+        - stats
+        - metadata
+        - domains
       properties:
         repo:
           type: string
@@ -1840,6 +1952,45 @@ components:
           type: object
           description: High-level metadata and summary insights including filesProcessed, classes, functions, types, primaryLanguage, and domains count.
           additionalProperties: true
+        stats:
+          type: object
+          properties:
+            nodeCount:
+              type: integer
+              format: int64
+            relationshipCount:
+              type: integer
+              format: int64
+            nodeTypes:
+              type: object
+              additionalProperties:
+                type: integer
+            relationshipTypes:
+              type: object
+              additionalProperties:
+                type: integer
+          description: Graph statistics including node and relationship counts by type
+        metadata:
+          type: object
+          properties:
+            analysisStartTime:
+              type: string
+              format: date-time
+            analysisEndTime:
+              type: string
+              format: date-time
+            fileCount:
+              type: integer
+            languages:
+              type: array
+              items:
+                type: string
+          description: Analysis metadata including timing and file information
+        domains:
+          type: array
+          items:
+            $ref: '#/components/schemas/DomainSummary'
+          description: Array of discovered domain entities
         graph:
           type: object
           description: Unified code graph containing all nodes and relationships.
@@ -1868,6 +2019,37 @@ components:
         runId:
           type: string
           description: Unique identifier for this classification run
+        graph:
+          type: object
+          properties:
+            nodes:
+              type: array
+              items:
+                $ref: '#/components/schemas/CodeGraphNode'
+            relationships:
+              type: array
+              items:
+                $ref: '#/components/schemas/CodeGraphRelationship'
+          required:
+            - nodes
+            - relationships
+          description: Graph representation with Domain and Subdomain nodes
+        metadata:
+          type: object
+          properties:
+            analysisStartTime:
+              type: string
+              format: date-time
+            analysisEndTime:
+              type: string
+              format: date-time
+            fileCount:
+              type: integer
+            languages:
+              type: array
+              items:
+                type: string
+          description: Analysis metadata including timing and file information
         domains:
           type: array
           items:
@@ -1907,6 +2089,8 @@ components:
           $ref: '#/components/schemas/ClassificationStats'
       required:
         - runId
+        - graph
+        - metadata
         - domains
         - relationships
         - fileAssignments
@@ -1953,9 +2137,27 @@ components:
         descriptionSummary:
           type: string
           description: Concise description of the subdomain
+        files:
+          type: array
+          items:
+            type: string
+          description: List of file paths assigned to this subdomain
+        functions:
+          type: array
+          items:
+            type: string
+          description: List of function IDs assigned to this subdomain
+        classes:
+          type: array
+          items:
+            type: string
+          description: List of class IDs assigned to this subdomain
       required:
         - name
         - descriptionSummary
+        - files
+        - functions
+        - classes
     DomainRelationship:
       type: object
       properties:
@@ -2048,12 +2250,39 @@ components:
     ClassificationStats:
       type: object
       properties:
+        nodeCount:
+          type: integer
+          format: int64
+          description: Total number of nodes in the graph
+        relationshipCount:
+          type: integer
+          format: int64
+          description: Total number of relationships in the graph
+        nodeTypes:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Count of nodes by type
+        relationshipTypes:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Count of relationships by type
         domainCount:
           type: integer
           description: Number of domains discovered
-        relationshipCount:
+        subdomainCount:
           type: integer
-          description: Number of relationships
+          description: Number of subdomains discovered
+        assignedFileCount:
+          type: integer
+          description: Number of files assigned to domains/subdomains
+        assignedFunctionCount:
+          type: integer
+          description: Number of functions assigned to domains/subdomains
+        assignedClassCount:
+          type: integer
+          description: Number of classes assigned to domains/subdomains
         fileAssignments:
           type: integer
           description: Count of file assignments
@@ -2067,8 +2296,15 @@ components:
           type: integer
           description: Count of class assignments
       required:
-        - domainCount
+        - nodeCount
         - relationshipCount
+        - nodeTypes
+        - relationshipTypes
+        - domainCount
+        - subdomainCount
+        - assignedFileCount
+        - assignedFunctionCount
+        - assignedClassCount
         - fileAssignments
         - functionAssignments
         - unassignedFunctions
