@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Supermodel
   description: Code Graphing & Analysis API
-  version: 0.9.2
+  version: 0.9.3
   license:
     name: Supermodel API Terms of Service
     url: https://supermodeltools.com/legal/api-terms
@@ -1486,6 +1486,123 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /v1/analysis/dead-code:
+    post:
+      tags:
+        - Data Plane
+      summary: Dead code analysis
+      description: Upload a zipped repository snapshot to identify dead (unreachable) code candidates by combining parse graph declarations with call graph relationships.
+      operationId: generateDeadCodeAnalysis
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Zipped repository archive containing the code to analyze.
+      x-codeSamples:
+        - lang: cURL
+          label: cURL
+          source: |
+            curl -X POST 'https://api.supermodeltools.com/v1/analysis/dead-code' \
+              -H 'Idempotency-Key: <idempotency-key>' \
+              -H 'X-Api-Key: <api-key>' \
+              -F 'file=@/path/to/your/repo-snapshot.zip;type=application/zip'
+      responses:
+        '200':
+          description: Dead code analysis (job completed)
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Usage-Units:
+              $ref: '#/components/headers/X-Usage-Units'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeadCodeAnalysisResponseAsync'
+              example:
+                status: completed
+                jobId: abc-123-def
+                result:
+                  metadata:
+                    totalDeclarations: 162
+                    deadCodeCandidates: 102
+                    aliveCode: 60
+                    analysisMethod: parse_graph + call_graph
+                    analysisStartTime: '2025-02-05T15:42:05Z'
+                    analysisEndTime: '2025-02-05T15:42:10Z'
+                  deadCodeCandidates:
+                    - file: src/utils/idGenerator.ts
+                      name: generateSequentialId
+                      line: 8
+                      type: function
+                      confidence: high
+                      reason: No callers found in codebase
+                  aliveCode:
+                    - file: src/index.ts
+                      name: main
+                      line: 10
+                      type: function
+                      callerCount: 3
+                  entryPoints:
+                    - file: src/index.ts
+                      name: main
+                      line: 10
+                      type: function
+                      reason: Module export
+        '202':
+          description: Job accepted and processing
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            Retry-After:
+              description: Recommended wait time in seconds before polling again.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeadCodeAnalysisResponseAsync'
+              example:
+                status: processing
+                jobId: abc-123-def
+                retryAfter: 5
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          description: Bad Gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -1857,6 +1974,196 @@ components:
             result:
               $ref: '#/components/schemas/SupermodelIR'
               description: The result (present when status is completed).
+    DeadCodeAnalysisResponseAsync:
+      allOf:
+        - $ref: '#/components/schemas/JobStatus'
+        - type: object
+          description: Async response envelope for dead code analysis operations.
+          properties:
+            result:
+              $ref: '#/components/schemas/DeadCodeAnalysisResponse'
+              description: The result (present when status is completed).
+    DeadCodeAnalysisResponse:
+      type: object
+      description: Dead code analysis result containing candidates and alive code.
+      required:
+        - metadata
+        - deadCodeCandidates
+        - aliveCode
+        - entryPoints
+      properties:
+        metadata:
+          $ref: '#/components/schemas/DeadCodeAnalysisMetadata'
+        deadCodeCandidates:
+          type: array
+          description: Code elements with no detected callers or references.
+          items:
+            $ref: '#/components/schemas/DeadCodeCandidate'
+        aliveCode:
+          type: array
+          description: Code elements with at least one caller or reference.
+          items:
+            $ref: '#/components/schemas/AliveCodeItem'
+        entryPoints:
+          type: array
+          description: Detected entry points (exports, route handlers, main functions).
+          items:
+            $ref: '#/components/schemas/EntryPoint'
+    DeadCodeAnalysisMetadata:
+      type: object
+      description: Summary statistics for the dead code analysis.
+      required:
+        - totalDeclarations
+        - deadCodeCandidates
+        - aliveCode
+        - analysisMethod
+      properties:
+        totalDeclarations:
+          type: integer
+          format: int64
+          description: Total number of declarations (functions, classes, methods) analyzed.
+        deadCodeCandidates:
+          type: integer
+          format: int64
+          description: Number of dead code candidates found.
+        aliveCode:
+          type: integer
+          format: int64
+          description: Number of code elements with active references.
+        rootFilesCount:
+          type: integer
+          format: int64
+          description: Number of root files detected (files with no importers, used as entry points).
+        transitiveDeadCount:
+          type: integer
+          format: int64
+          description: Number of functions detected as dead via transitive propagation (all callers are dead).
+        symbolLevelDeadCount:
+          type: integer
+          format: int64
+          description: Number of exports detected as dead via symbol-level import analysis (exported but never imported by name).
+        analysisMethod:
+          type: string
+          description: Method used for analysis (e.g., 'dependency_graph_reachability').
+        analysisStartTime:
+          type: string
+          format: date-time
+          description: Timestamp when analysis started.
+        analysisEndTime:
+          type: string
+          format: date-time
+          description: Timestamp when analysis completed.
+    DeadCodeCandidate:
+      type: object
+      description: A code element identified as potentially dead (unreachable).
+      required:
+        - file
+        - name
+        - line
+        - type
+        - confidence
+        - reason
+      properties:
+        file:
+          type: string
+          description: File path relative to repository root.
+        name:
+          type: string
+          description: Name of the function, class, or method.
+        line:
+          type: integer
+          format: int32
+          description: Line number where the declaration starts.
+        type:
+          type: string
+          description: Type of code element.
+          enum:
+            - function
+            - class
+            - method
+            - interface
+            - type
+            - variable
+            - constant
+        confidence:
+          type: string
+          description: Confidence level of dead code detection.
+          enum:
+            - high
+            - medium
+            - low
+        reason:
+          type: string
+          description: Explanation of why this was flagged as dead code.
+    AliveCodeItem:
+      type: object
+      description: A code element with active callers or references.
+      required:
+        - file
+        - name
+        - line
+        - type
+        - callerCount
+      properties:
+        file:
+          type: string
+          description: File path relative to repository root.
+        name:
+          type: string
+          description: Name of the function, class, or method.
+        line:
+          type: integer
+          format: int32
+          description: Line number where the declaration starts.
+        type:
+          type: string
+          description: Type of code element.
+          enum:
+            - function
+            - class
+            - method
+            - interface
+            - type
+            - variable
+            - constant
+        callerCount:
+          type: integer
+          format: int32
+          description: Number of unique callers or references.
+    EntryPoint:
+      type: object
+      description: A detected entry point that should not be flagged as dead code.
+      required:
+        - file
+        - name
+        - line
+        - type
+        - reason
+      properties:
+        file:
+          type: string
+          description: File path relative to repository root.
+        name:
+          type: string
+          description: Name of the entry point.
+        line:
+          type: integer
+          format: int32
+          description: Line number where the entry point is declared.
+        type:
+          type: string
+          description: Type of code element.
+          enum:
+            - function
+            - class
+            - method
+            - interface
+            - type
+            - variable
+            - constant
+        reason:
+          type: string
+          description: Reason this is considered an entry point (e.g., 'Module export', 'Route handler', 'Main function').
     Error:
       type: object
       description: Standardized error payload returned by the API.
