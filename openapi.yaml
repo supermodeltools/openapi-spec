@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Supermodel
   description: Code Graphing & Analysis API
-  version: 0.9.3
+  version: 0.9.4
   license:
     name: Supermodel API Terms of Service
     url: https://supermodeltools.com/legal/api-terms
@@ -1603,6 +1603,479 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /v1/analysis/test-coverage-map:
+    post:
+      tags:
+        - Data Plane
+      summary: Test coverage map
+      description: Upload a zipped repository snapshot to identify functions with zero test coverage by tracing call graph reachability from test files to production code. This is static analysis — no test execution or instrumentation required.
+      operationId: generateTestCoverageMap
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Zipped repository archive containing the code to analyze.
+      x-codeSamples:
+        - lang: cURL
+          label: cURL
+          source: |
+            curl -X POST 'https://api.supermodeltools.com/v1/analysis/test-coverage-map' \
+              -H 'Idempotency-Key: <idempotency-key>' \
+              -H 'X-Api-Key: <api-key>' \
+              -F 'file=@/path/to/your/repo-snapshot.zip;type=application/zip'
+      responses:
+        '200':
+          description: Test coverage map (job completed)
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Usage-Units:
+              $ref: '#/components/headers/X-Usage-Units'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestCoverageMapResponseAsync'
+              example:
+                status: completed
+                jobId: abc-123-def
+                result:
+                  metadata:
+                    totalFiles: 142
+                    testFiles: 28
+                    productionFiles: 114
+                    totalFunctions: 891
+                    testedFunctions: 342
+                    untestedFunctions: 549
+                    coveragePercentage: 38.4
+                    analysisMethod: static_call_graph_test_reachability
+                    analysisStartTime: '2026-02-09T12:00:00Z'
+                    analysisEndTime: '2026-02-09T12:01:00Z'
+                  untestedFunctions:
+                    - file: src/services/billing.ts
+                      name: calculateRefund
+                      line: 89
+                      type: function
+                      confidence: high
+                      reason: No test file calls this function directly or transitively
+                  testedFunctions:
+                    - file: src/services/billing.ts
+                      name: calculateTotal
+                      line: 45
+                      type: function
+                      testFiles:
+                        - tests/billing.test.ts
+                      directTestCallers: 3
+                      transitiveTestCallers: 7
+                  testFiles:
+                    - file: tests/billing.test.ts
+                      testFunctions: 12
+                      productionFunctionsCovered: 8
+                      productionFilesCovered: 3
+                  coverageByFile:
+                    - file: src/services/billing.ts
+                      totalFunctions: 12
+                      testedFunctions: 8
+                      untestedFunctions: 4
+                      coveragePercentage: 66.7
+        '202':
+          description: Job accepted and processing
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            Retry-After:
+              description: Recommended wait time in seconds before polling again.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TestCoverageMapResponseAsync'
+              example:
+                status: processing
+                jobId: abc-123-def
+                retryAfter: 5
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          description: Bad Gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/analysis/circular-dependencies:
+    post:
+      tags:
+        - Data Plane
+      summary: Circular dependency detection
+      description: Upload a zipped repository snapshot to detect circular dependencies (dependency cycles) at the file level using Tarjan's strongly connected components algorithm.
+      operationId: generateCircularDependencyAnalysis
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Zipped repository archive containing the code to analyze.
+      x-codeSamples:
+        - lang: cURL
+          label: cURL
+          source: |
+            curl -X POST 'https://api.supermodeltools.com/v1/analysis/circular-dependencies' \
+              -H 'Idempotency-Key: <idempotency-key>' \
+              -H 'X-Api-Key: <api-key>' \
+              -F 'file=@/path/to/your/repo-snapshot.zip;type=application/zip'
+      responses:
+        '200':
+          description: Circular dependency analysis (job completed)
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Usage-Units:
+              $ref: '#/components/headers/X-Usage-Units'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CircularDependencyResponseAsync'
+              example:
+                status: completed
+                jobId: abc-123-def
+                result:
+                  metadata:
+                    totalFiles: 142
+                    totalImports: 487
+                    cycleCount: 7
+                    analysisMethod: tarjan_scc
+                    analysisStartTime: '2026-02-09T12:00:00Z'
+                    analysisEndTime: '2026-02-09T12:00:05Z'
+                  cycles:
+                    - id: cycle-1
+                      severity: high
+                      files:
+                        - src/services/billingService.ts
+                        - src/services/orderService.ts
+                        - src/services/userService.ts
+                      edges:
+                        - source: src/services/userService.ts
+                          target: src/services/orderService.ts
+                          importedSymbols:
+                            - getOrders
+                            - OrderStatus
+                        - source: src/services/orderService.ts
+                          target: src/services/billingService.ts
+                          importedSymbols:
+                            - calculateTotal
+                        - source: src/services/billingService.ts
+                          target: src/services/userService.ts
+                          importedSymbols:
+                            - getUserDiscount
+                      breakingSuggestion: src/services/billingService.ts -> src/services/userService.ts
+                  summary:
+                    totalCycles: 7
+                    filesInCycles: 18
+                    highSeverityCount: 2
+                    mediumSeverityCount: 3
+                    lowSeverityCount: 2
+        '202':
+          description: Job accepted and processing
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            Retry-After:
+              description: Recommended wait time in seconds before polling again.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CircularDependencyResponseAsync'
+              example:
+                status: processing
+                jobId: abc-123-def
+                retryAfter: 5
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          description: Bad Gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/analysis/impact:
+    post:
+      tags:
+        - Data Plane
+      summary: Impact analysis
+      description: |-
+        Compute blast radius — what breaks if a given file or function changes. Uses reverse-reachability BFS on call graph and dependency graph, enriched with LLM-powered domain classification to detect cross-domain impact.
+
+        **Three usage modes:**
+        1. **With diff** — upload a unified diff (`git diff` output) alongside the repo zip.
+           Changed files are automatically extracted as targets. Best for CI/CD pipelines.
+
+        2. **With targets** — specify files or file:function pairs via query parameter.
+           Best for ad-hoc analysis of specific functions.
+
+        3. **Neither** — analyzes the entire codebase and returns a global coupling/risk map
+           with the most critical files ranked by dependent count.
+
+
+        **CI Integration (GitHub Actions):**
+        ```yaml - name: Impact Analysis
+          run: |
+            git diff origin/main...HEAD > changes.diff
+            git archive --format=zip HEAD -o repo.zip
+            curl -s -X POST "$SUPERMODEL_API_URL/v1/analysis/impact" \
+              -H "Idempotency-Key: ${{ github.run_id }}-impact" \
+              -H "X-Api-Key: ${{ secrets.SUPERMODEL_API_KEY }}" \
+              -F "file=@repo.zip;type=application/zip" \
+              -F "diff=@changes.diff;type=text/plain" \
+              -o impact.json
+        ```
+
+        **CI Integration (GitLab CI):**
+        ```yaml impact_analysis:
+          script:
+            - git diff origin/main...HEAD > changes.diff
+            - git archive --format=zip HEAD -o repo.zip
+            - >-
+              curl -s -X POST "$SUPERMODEL_API_URL/v1/analysis/impact"
+              -H "Idempotency-Key: $CI_PIPELINE_IID-impact"
+              -H "X-Api-Key: $SUPERMODEL_API_KEY"
+              -F "file=@repo.zip;type=application/zip"
+              -F "diff=@changes.diff;type=text/plain"
+              -o impact.json
+        ```
+
+        **Standalone usage (no CI):**
+        ```bash # Analyze specific targets curl -X POST '.../v1/analysis/impact?targets=src/services/billing.ts:calculateTotal' \
+          -H 'Idempotency-Key: my-key' -H 'X-Api-Key: ...' \
+          -F 'file=@repo.zip;type=application/zip'
+
+        # Analyze from a diff git diff main > changes.diff && git archive --format=zip HEAD -o repo.zip curl -X POST '.../v1/analysis/impact' \
+          -H 'Idempotency-Key: my-key' -H 'X-Api-Key: ...' \
+          -F 'file=@repo.zip;type=application/zip' \
+          -F 'diff=@changes.diff;type=text/plain'
+
+        # Global coupling map (no targets, no diff) curl -X POST '.../v1/analysis/impact' \
+          -H 'Idempotency-Key: my-key' -H 'X-Api-Key: ...' \
+          -F 'file=@repo.zip;type=application/zip'
+        ```
+      operationId: generateImpactAnalysis
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: targets
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 'Comma-separated list of file paths or file:functionName pairs to analyze. If omitted, analyzes all files and returns a global coupling/risk map. Examples: ''src/services/billing.ts'', ''src/services/billing.ts:calculateTotal,src/auth/login.ts''.'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Zipped repository archive containing the code to analyze.
+                diff:
+                  type: string
+                  format: binary
+                  description: Optional unified diff (output of `git diff`). When provided, changed files are automatically extracted and used as analysis targets. This is the recommended input for CI/CD pipelines. If both `diff` and `targets` are provided, the targets from both are merged.
+      x-codeSamples:
+        - lang: cURL
+          label: With diff (CI)
+          source: |
+            git diff origin/main...HEAD > changes.diff
+            git archive --format=zip HEAD -o repo.zip
+            curl -X POST 'https://api.supermodeltools.com/v1/analysis/impact' \
+              -H 'Idempotency-Key: <idempotency-key>' \
+              -H 'X-Api-Key: <api-key>' \
+              -F 'file=@repo.zip;type=application/zip' \
+              -F 'diff=@changes.diff;type=text/plain'
+        - lang: cURL
+          label: With targets
+          source: |
+            curl -X POST 'https://api.supermodeltools.com/v1/analysis/impact?targets=src/services/billing.ts' \
+              -H 'Idempotency-Key: <idempotency-key>' \
+              -H 'X-Api-Key: <api-key>' \
+              -F 'file=@/path/to/your/repo-snapshot.zip;type=application/zip'
+      responses:
+        '200':
+          description: Impact analysis (job completed)
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            RateLimit-Limit:
+              $ref: '#/components/headers/RateLimit-Limit'
+            RateLimit-Remaining:
+              $ref: '#/components/headers/RateLimit-Remaining'
+            RateLimit-Reset:
+              $ref: '#/components/headers/RateLimit-Reset'
+            X-Usage-Units:
+              $ref: '#/components/headers/X-Usage-Units'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImpactAnalysisResponseAsync'
+              example:
+                status: completed
+                jobId: abc-123-def
+                result:
+                  metadata:
+                    totalFiles: 142
+                    totalFunctions: 891
+                    targetsAnalyzed: 1
+                    analysisMethod: reverse_reachability_call_graph
+                    analysisStartTime: '2026-02-09T12:00:00Z'
+                    analysisEndTime: '2026-02-09T12:00:45Z'
+                  impacts:
+                    - target:
+                        file: src/services/billing.ts
+                        name: calculateTotal
+                        line: 45
+                        type: function
+                      blastRadius:
+                        directDependents: 8
+                        transitiveDependents: 31
+                        affectedFiles: 12
+                        affectedDomains:
+                          - Billing
+                          - Checkout
+                          - Notifications
+                        riskScore: high
+                        riskFactors:
+                          - High fan-in (8 direct callers)
+                          - Deep dependency chain (5 levels)
+                          - Crosses 3 domain boundaries
+                      affectedFunctions:
+                        - file: src/handlers/checkout.ts
+                          name: processCheckout
+                          line: 12
+                          type: function
+                          distance: 1
+                          relationship: direct_caller
+                      affectedFiles:
+                        - file: src/handlers/checkout.ts
+                          directDependencies: 3
+                          transitiveDependencies: 7
+                      entryPointsAffected:
+                        - file: src/routes/checkout.ts
+                          name: POST /checkout
+                          type: route_handler
+                  globalMetrics:
+                    mostCriticalFiles:
+                      - file: src/services/billing.ts
+                        dependentCount: 31
+                        riskScore: high
+                    crossDomainDependencies:
+                      - from: Billing
+                        to: Checkout
+                        edgeCount: 5
+                      - from: Billing
+                        to: Notifications
+                        edgeCount: 2
+        '202':
+          description: Job accepted and processing
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+            X-API-Version:
+              $ref: '#/components/headers/X-API-Version'
+            Retry-After:
+              description: Recommended wait time in seconds before polling again.
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImpactAnalysisResponseAsync'
+              example:
+                status: processing
+                jobId: abc-123-def
+                retryAfter: 10
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          description: Bad Gateway
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -1983,6 +2456,308 @@ components:
             result:
               $ref: '#/components/schemas/DeadCodeAnalysisResponse'
               description: The result (present when status is completed).
+    TestCoverageMapResponseAsync:
+      allOf:
+        - $ref: '#/components/schemas/JobStatus'
+        - type: object
+          description: Async response envelope for test coverage map operations.
+          properties:
+            result:
+              $ref: '#/components/schemas/TestCoverageMapResponse'
+              description: The result (present when status is completed).
+    CircularDependencyResponseAsync:
+      allOf:
+        - $ref: '#/components/schemas/JobStatus'
+        - type: object
+          description: Async response envelope for circular dependency analysis operations.
+          properties:
+            result:
+              $ref: '#/components/schemas/CircularDependencyResponse'
+              description: The result (present when status is completed).
+    ImpactAnalysisResponseAsync:
+      allOf:
+        - $ref: '#/components/schemas/JobStatus'
+        - type: object
+          description: Async response envelope for impact analysis operations.
+          properties:
+            result:
+              $ref: '#/components/schemas/ImpactAnalysisResponse'
+              description: The result (present when status is completed).
+    ImpactAnalysisResponse:
+      type: object
+      description: Impact analysis result containing blast radius and affected functions/files.
+      required:
+        - metadata
+        - impacts
+        - globalMetrics
+      properties:
+        metadata:
+          $ref: '#/components/schemas/ImpactAnalysisMetadata'
+        impacts:
+          type: array
+          description: Impact results for each analyzed target.
+          items:
+            $ref: '#/components/schemas/ImpactResult'
+        globalMetrics:
+          $ref: '#/components/schemas/ImpactGlobalMetrics'
+    ImpactAnalysisMetadata:
+      type: object
+      description: Summary statistics for the impact analysis.
+      required:
+        - totalFiles
+        - totalFunctions
+        - targetsAnalyzed
+        - analysisMethod
+      properties:
+        totalFiles:
+          type: integer
+          format: int64
+          description: Total number of files in the repository.
+        totalFunctions:
+          type: integer
+          format: int64
+          description: Total number of functions analyzed.
+        targetsAnalyzed:
+          type: integer
+          format: int32
+          description: Number of targets analyzed.
+        analysisMethod:
+          type: string
+          description: Method used for impact analysis.
+        analysisStartTime:
+          type: string
+          format: date-time
+          description: Timestamp when analysis started.
+        analysisEndTime:
+          type: string
+          format: date-time
+          description: Timestamp when analysis completed.
+    ImpactResult:
+      type: object
+      description: Impact analysis result for a single target.
+      required:
+        - target
+        - blastRadius
+        - affectedFunctions
+        - affectedFiles
+        - entryPointsAffected
+      properties:
+        target:
+          $ref: '#/components/schemas/ImpactTarget'
+        blastRadius:
+          $ref: '#/components/schemas/BlastRadius'
+        affectedFunctions:
+          type: array
+          description: Functions affected by changes to this target.
+          items:
+            $ref: '#/components/schemas/AffectedFunction'
+        affectedFiles:
+          type: array
+          description: Files affected by changes to this target.
+          items:
+            $ref: '#/components/schemas/AffectedFile'
+        entryPointsAffected:
+          type: array
+          description: Entry points (route handlers, exports) affected by this target.
+          items:
+            $ref: '#/components/schemas/AffectedEntryPoint'
+    ImpactTarget:
+      type: object
+      description: The target file or function being analyzed for impact.
+      required:
+        - file
+        - type
+      properties:
+        file:
+          type: string
+          description: File path relative to repository root.
+        name:
+          type: string
+          description: Function or method name (if targeting a specific function).
+        line:
+          type: integer
+          format: int32
+          description: Line number of the target declaration.
+        type:
+          type: string
+          description: Type of the target element.
+          enum:
+            - file
+            - function
+            - method
+            - class
+    BlastRadius:
+      type: object
+      description: Blast radius metrics for a target.
+      required:
+        - directDependents
+        - transitiveDependents
+        - affectedFiles
+        - riskScore
+      properties:
+        directDependents:
+          type: integer
+          format: int32
+          description: Number of direct callers/dependents.
+        transitiveDependents:
+          type: integer
+          format: int32
+          description: Number of transitive (indirect) dependents.
+        affectedFiles:
+          type: integer
+          format: int32
+          description: Number of files affected.
+        affectedDomains:
+          type: array
+          description: Domains affected by this change (scaffolded, empty in v1).
+          items:
+            type: string
+        riskScore:
+          type: string
+          description: Risk level based on blast radius analysis.
+          enum:
+            - low
+            - medium
+            - high
+            - critical
+        riskFactors:
+          type: array
+          description: Human-readable explanations for the risk score.
+          items:
+            type: string
+    AffectedFunction:
+      type: object
+      description: A function affected by changes to the target.
+      required:
+        - file
+        - name
+        - type
+        - distance
+        - relationship
+      properties:
+        file:
+          type: string
+          description: File path relative to repository root.
+        name:
+          type: string
+          description: Name of the affected function.
+        line:
+          type: integer
+          format: int32
+          description: Line number of the function declaration.
+        type:
+          type: string
+          description: Type of code element.
+          enum:
+            - function
+            - method
+            - class
+        distance:
+          type: integer
+          format: int32
+          description: Number of hops from the target in the call graph.
+        relationship:
+          type: string
+          description: Relationship type to the target.
+          enum:
+            - direct_caller
+            - transitive_caller
+    AffectedFile:
+      type: object
+      description: A file affected by changes to the target.
+      required:
+        - file
+        - directDependencies
+        - transitiveDependencies
+      properties:
+        file:
+          type: string
+          description: File path relative to repository root.
+        directDependencies:
+          type: integer
+          format: int32
+          description: Number of direct dependencies in this file.
+        transitiveDependencies:
+          type: integer
+          format: int32
+          description: Number of transitive dependencies in this file.
+    AffectedEntryPoint:
+      type: object
+      description: An entry point affected by changes to the target.
+      required:
+        - file
+        - name
+        - type
+      properties:
+        file:
+          type: string
+          description: File path relative to repository root.
+        name:
+          type: string
+          description: Name or route of the entry point.
+        type:
+          type: string
+          description: Type of entry point.
+          enum:
+            - route_handler
+            - module_export
+            - main_function
+            - event_handler
+    ImpactGlobalMetrics:
+      type: object
+      description: Global metrics across all analyzed targets.
+      properties:
+        mostCriticalFiles:
+          type: array
+          description: Files with the highest dependent counts.
+          items:
+            $ref: '#/components/schemas/CriticalFile'
+        crossDomainDependencies:
+          type: array
+          description: Dependencies that cross domain boundaries (scaffolded, empty in v1).
+          items:
+            $ref: '#/components/schemas/CrossDomainDependency'
+    CriticalFile:
+      type: object
+      description: A file identified as critical due to high dependent count.
+      required:
+        - file
+        - dependentCount
+        - riskScore
+      properties:
+        file:
+          type: string
+          description: File path relative to repository root.
+        dependentCount:
+          type: integer
+          format: int32
+          description: Total number of transitive dependents.
+        riskScore:
+          type: string
+          description: Risk level based on dependent count.
+          enum:
+            - low
+            - medium
+            - high
+            - critical
+    CrossDomainDependency:
+      type: object
+      description: A dependency that crosses domain boundaries.
+      required:
+        - from
+        - to
+        - edgeCount
+      properties:
+        from:
+          type: string
+          description: Source domain.
+        to:
+          type: string
+          description: Target domain.
+        edgeCount:
+          type: integer
+          format: int32
+          description: Number of cross-domain edges.
     DeadCodeAnalysisResponse:
       type: object
       description: Dead code analysis result containing candidates and alive code.
@@ -2164,6 +2939,438 @@ components:
         reason:
           type: string
           description: Reason this is considered an entry point (e.g., 'Module export', 'Route handler', 'Main function').
+    TestCoverageMapResponse:
+      type: object
+      description: Test coverage map result identifying tested and untested functions via static call graph reachability from test files.
+      required:
+        - metadata
+        - untestedFunctions
+        - testedFunctions
+        - testFiles
+        - coverageByFile
+      properties:
+        metadata:
+          $ref: '#/components/schemas/TestCoverageMapMetadata'
+        untestedFunctions:
+          type: array
+          description: Production functions with no test coverage (not reachable from any test function).
+          items:
+            $ref: '#/components/schemas/UntestedFunction'
+        testedFunctions:
+          type: array
+          description: Production functions with test coverage (reachable from at least one test function).
+          items:
+            $ref: '#/components/schemas/TestedFunction'
+        testFiles:
+          type: array
+          description: Detected test files with coverage statistics.
+          items:
+            $ref: '#/components/schemas/TestFileInfo'
+        coverageByDomain:
+          type: array
+          description: Coverage breakdown by domain classification.
+          items:
+            $ref: '#/components/schemas/CoverageByDomain'
+        coverageByFile:
+          type: array
+          description: Coverage breakdown by production file.
+          items:
+            $ref: '#/components/schemas/CoverageByFile'
+    TestCoverageMapMetadata:
+      type: object
+      description: Summary statistics for the test coverage map analysis.
+      required:
+        - totalFiles
+        - testFiles
+        - productionFiles
+        - totalFunctions
+        - testedFunctions
+        - untestedFunctions
+        - coveragePercentage
+        - analysisMethod
+      properties:
+        totalFiles:
+          type: integer
+          format: int64
+          description: Total number of files in the repository.
+        testFiles:
+          type: integer
+          format: int64
+          description: Number of files identified as test files.
+        productionFiles:
+          type: integer
+          format: int64
+          description: Number of non-test (production) files.
+        totalFunctions:
+          type: integer
+          format: int64
+          description: Total number of functions in production files.
+        testedFunctions:
+          type: integer
+          format: int64
+          description: Number of production functions reachable from test functions.
+        untestedFunctions:
+          type: integer
+          format: int64
+          description: Number of production functions not reachable from any test function.
+        coveragePercentage:
+          type: number
+          format: double
+          description: Percentage of production functions with test coverage.
+        analysisMethod:
+          type: string
+          description: Method used for analysis.
+        analysisStartTime:
+          type: string
+          format: date-time
+          description: Timestamp when analysis started.
+        analysisEndTime:
+          type: string
+          format: date-time
+          description: Timestamp when analysis completed.
+    UntestedFunction:
+      type: object
+      description: A production function with no test coverage.
+      required:
+        - file
+        - name
+        - line
+        - type
+        - confidence
+        - reason
+      properties:
+        file:
+          type: string
+          description: File path relative to repository root.
+        name:
+          type: string
+          description: Name of the function or method.
+        line:
+          type: integer
+          format: int32
+          description: Line number where the function is declared.
+        type:
+          type: string
+          description: Type of code element.
+          enum:
+            - function
+            - class
+            - method
+            - interface
+            - type
+            - variable
+            - constant
+        confidence:
+          type: string
+          description: Confidence level of the untested classification.
+          enum:
+            - high
+            - medium
+            - low
+        reason:
+          type: string
+          description: Explanation of why this function is classified as untested.
+        nearestTestedCaller:
+          $ref: '#/components/schemas/NearestTestedCaller'
+        suggestedTestFile:
+          type: string
+          description: The test file that covers the most sibling functions in the same production file. This is the recommended file in which to add a test for this untested function.
+        testedSiblings:
+          type: array
+          description: Other functions in the same file that ARE tested, along with which test files cover them. Use this to see existing test patterns you can follow.
+          items:
+            $ref: '#/components/schemas/TestedSibling'
+    TestedSibling:
+      type: object
+      description: A sibling function in the same file that has test coverage.
+      required:
+        - name
+        - line
+        - testFiles
+      properties:
+        name:
+          type: string
+          description: Name of the tested sibling function.
+        line:
+          type: integer
+          format: int32
+          description: Line number where the sibling function is declared.
+        testFiles:
+          type: array
+          description: Test files that cover this sibling function.
+          items:
+            type: string
+    NearestTestedCaller:
+      type: object
+      description: The nearest function in the call graph that has test coverage.
+      required:
+        - file
+        - name
+        - distance
+      properties:
+        file:
+          type: string
+          description: File path of the nearest tested function.
+        name:
+          type: string
+          description: Name of the nearest tested function.
+        distance:
+          type: integer
+          format: int32
+          description: Number of call graph hops to the nearest tested function.
+    TestedFunction:
+      type: object
+      description: A production function reachable from at least one test function.
+      required:
+        - file
+        - name
+        - line
+        - type
+        - testFiles
+        - directTestCallers
+        - transitiveTestCallers
+      properties:
+        file:
+          type: string
+          description: File path relative to repository root.
+        name:
+          type: string
+          description: Name of the function or method.
+        line:
+          type: integer
+          format: int32
+          description: Line number where the function is declared.
+        type:
+          type: string
+          description: Type of code element.
+          enum:
+            - function
+            - class
+            - method
+            - interface
+            - type
+            - variable
+            - constant
+        testFiles:
+          type: array
+          description: Test files that cover this function (directly or transitively).
+          items:
+            type: string
+        directTestCallers:
+          type: integer
+          format: int32
+          description: Number of test functions that directly call this function.
+        transitiveTestCallers:
+          type: integer
+          format: int32
+          description: Number of test functions that transitively reach this function.
+    TestFileInfo:
+      type: object
+      description: Information about a detected test file.
+      required:
+        - file
+        - testFunctions
+        - productionFunctionsCovered
+        - productionFilesCovered
+      properties:
+        file:
+          type: string
+          description: File path relative to repository root.
+        testFunctions:
+          type: integer
+          format: int32
+          description: Number of test functions defined in this file.
+        productionFunctionsCovered:
+          type: integer
+          format: int32
+          description: Number of unique production functions covered by tests in this file.
+        productionFilesCovered:
+          type: integer
+          format: int32
+          description: Number of unique production files covered by tests in this file.
+    CoverageByDomain:
+      type: object
+      description: Test coverage breakdown for a domain.
+      required:
+        - domain
+        - totalFunctions
+        - testedFunctions
+        - coveragePercentage
+      properties:
+        domain:
+          type: string
+          description: Domain name from domain classification.
+        totalFunctions:
+          type: integer
+          format: int32
+          description: Total functions in the domain.
+        testedFunctions:
+          type: integer
+          format: int32
+          description: Number of tested functions in the domain.
+        coveragePercentage:
+          type: number
+          format: double
+          description: Coverage percentage for the domain.
+    CoverageByFile:
+      type: object
+      description: Test coverage breakdown for a production file.
+      required:
+        - file
+        - totalFunctions
+        - testedFunctions
+        - untestedFunctions
+        - coveragePercentage
+      properties:
+        file:
+          type: string
+          description: File path relative to repository root.
+        totalFunctions:
+          type: integer
+          format: int32
+          description: Total functions in the file.
+        testedFunctions:
+          type: integer
+          format: int32
+          description: Number of tested functions in the file.
+        untestedFunctions:
+          type: integer
+          format: int32
+          description: Number of untested functions in the file.
+        coveragePercentage:
+          type: number
+          format: double
+          description: Coverage percentage for the file.
+    CircularDependencyResponse:
+      type: object
+      description: Circular dependency analysis result containing detected cycles and summary.
+      required:
+        - metadata
+        - cycles
+        - summary
+      properties:
+        metadata:
+          $ref: '#/components/schemas/CircularDependencyMetadata'
+        cycles:
+          type: array
+          description: Detected dependency cycles.
+          items:
+            $ref: '#/components/schemas/CircularDependencyCycle'
+        summary:
+          $ref: '#/components/schemas/CircularDependencySummary'
+    CircularDependencyMetadata:
+      type: object
+      description: Summary statistics for the circular dependency analysis.
+      required:
+        - totalFiles
+        - totalImports
+        - cycleCount
+        - analysisMethod
+      properties:
+        totalFiles:
+          type: integer
+          format: int32
+          description: Total number of files in the dependency graph.
+        totalImports:
+          type: integer
+          format: int32
+          description: Total number of import relationships.
+        cycleCount:
+          type: integer
+          format: int32
+          description: Number of cycles found.
+        analysisMethod:
+          type: string
+          description: Algorithm used for cycle detection (e.g., tarjan_scc).
+        analysisStartTime:
+          type: string
+          format: date-time
+          description: Timestamp when analysis started.
+        analysisEndTime:
+          type: string
+          format: date-time
+          description: Timestamp when analysis completed.
+    CircularDependencyCycle:
+      type: object
+      description: A single dependency cycle (strongly connected component).
+      required:
+        - id
+        - files
+        - edges
+        - severity
+      properties:
+        id:
+          type: string
+          description: Unique identifier for this cycle (e.g., cycle-1).
+        files:
+          type: array
+          description: Files involved in this cycle, sorted alphabetically.
+          items:
+            type: string
+        edges:
+          type: array
+          description: Import edges that form this cycle.
+          items:
+            $ref: '#/components/schemas/CycleEdge'
+        severity:
+          type: string
+          description: Severity of this cycle based on cross-directory span and size.
+          enum:
+            - low
+            - medium
+            - high
+        breakingSuggestion:
+          type: string
+          description: Suggested edge to break to resolve this cycle.
+    CycleEdge:
+      type: object
+      description: A directed import edge within a cycle.
+      required:
+        - source
+        - target
+        - importedSymbols
+      properties:
+        source:
+          type: string
+          description: File path of the importing file.
+        target:
+          type: string
+          description: File path of the imported file.
+        importedSymbols:
+          type: array
+          description: Symbols imported along this edge.
+          items:
+            type: string
+    CircularDependencySummary:
+      type: object
+      description: Aggregate summary of circular dependency analysis.
+      required:
+        - totalCycles
+        - filesInCycles
+        - highSeverityCount
+        - mediumSeverityCount
+        - lowSeverityCount
+      properties:
+        totalCycles:
+          type: integer
+          format: int32
+          description: Total number of cycles found.
+        filesInCycles:
+          type: integer
+          format: int32
+          description: Number of unique files involved in at least one cycle.
+        highSeverityCount:
+          type: integer
+          format: int32
+          description: Number of high-severity cycles.
+        mediumSeverityCount:
+          type: integer
+          format: int32
+          description: Number of medium-severity cycles.
+        lowSeverityCount:
+          type: integer
+          format: int32
+          description: Number of low-severity cycles.
     Error:
       type: object
       description: Standardized error payload returned by the API.
