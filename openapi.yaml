@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Supermodel
   description: Code Graphing & Analysis API
-  version: 0.9.5
+  version: 0.9.6
   license:
     name: Supermodel API Terms of Service
     url: https://supermodeltools.com/legal/api-terms
@@ -750,7 +750,7 @@ paths:
                           description: Processes payment transactions
                     relationships:
                       - id: domain:BillingAccount->contains->subdomain:BillingAccount:PaymentProcessing
-                        type: CONTAINS
+                        type: contains
                         startNode: domain:BillingAccount
                         endNode: subdomain:BillingAccount:PaymentProcessing
                         properties: {}
@@ -819,7 +819,7 @@ paths:
                       Domain: 2
                       Subdomain: 1
                     relationshipTypes:
-                      CONTAINS: 1
+                      contains: 1
                     domainCount: 2
                     subdomainCount: 1
                     assignedFileCount: 1
