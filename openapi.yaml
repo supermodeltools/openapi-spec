@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Supermodel
   description: Code Graphing & Analysis API
-  version: 0.10.0
+  version: 0.11.2
   license:
     name: Supermodel API Terms of Service
     url: https://supermodeltools.com/legal/api-terms
@@ -2083,15 +2083,6 @@ components:
       in: header
       name: X-Api-Key
       description: API key issued by the control plane for accessing data plane resources.
-    BearerAuth:
-      type: http
-      scheme: bearer
-      description: HTTP Bearer authentication using an OAuth provider-issued access token presented via the Authorization header.
-    StripeSecret:
-      type: apiKey
-      in: header
-      name: Stripe-Secret
-      description: Shared secret used to authorize Stripe webhook callbacks.
   parameters:
     IdempotencyKey:
       name: Idempotency-Key
