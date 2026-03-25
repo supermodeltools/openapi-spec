@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Supermodel
   description: Code Graphing & Analysis API
-  version: 0.11.9
+  version: 0.11.10
   license:
     name: Supermodel API Terms of Service
     url: https://supermodeltools.com/legal/api-terms
@@ -1497,6 +1497,25 @@ paths:
         - ApiKeyAuth: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
+        - name: min_confidence
+          in: query
+          required: false
+          description: Minimum confidence level for returned candidates. Use `high` to limit results to the most certain dead code, reducing noise for large repositories. When omitted, all confidence levels are returned.
+          schema:
+            type: string
+            enum:
+              - high
+              - medium
+              - low
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of candidates to return, sorted by confidence (high first). Use to cap response size for large repositories. When omitted, all candidates are returned.
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 10000
       requestBody:
         required: true
         content:
